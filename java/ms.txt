@@ -1,0 +1,63 @@
+用户密码加密
+    加密方式：
+        对称式加密：加密解密使用同一个密钥  DES 3DES
+        非对称加密：公钥与私钥，加密公钥解密用私钥  RSA
+        哈希算法
+    加盐密码哈希
+        盐值使用加密安全伪随机数生成器（ Cryptographically Secure Pseudo-Random Number Generator，CSPRNG ）
+        Java：java.security.SecureRandom
+        盐值至少要跟哈希函数的输出一样长
+        该盐应和密码哈希一起存储在用户帐号表中
+    存储密码的步骤
+        使用CSPRNG生成一个长度足够的盐值
+        将盐值混入密码，并使用标准的加密哈希函数进行加密，如SHA256  SHA-256、SHA-512 会比 md5 更安全
+        把哈希值和盐值一起存入数据库中对应此用户的那条记录
+    校验密码的步骤
+        从数据库取出用户的密码哈希值和对应盐值
+        将盐值混入用户输入的密码，并且使用同样的哈希函数进行加密
+        比较上一步的结果和数据库储存的哈希值是否相同，如果相同那么密码正确，反之密码错误
+
+        客户端
+        输入账号密码|                                                   |DB存储：Salt1，Salt2，SaltHash2
+                    |生成公私钥(a,A)                        公私钥(b,B) |
+                    |                                                   |
+                    |ECDH协商密钥 SharedKey=a*B                         |
+                    |                                                   |
+                    |  公钥A+AES(SharedKey,uid)-----------------------> |
+           请求salt |                                                   |ECDH 协商密钥：SharedKey=b*A
+                    |  <------------------- AES(SharedKey,Salt1,Salt2)  |
+                    |                                                   |
+                    |SaltHash1=bcrypt(SHA512(passwd),uid+Salt1,10)      |
+                    |SaltHash2=SHA512(SaltHash1+uid+Salt2)              |
+                    |Ticket=AES(SaltHash2, uid+time+SaltHash1+RandKey)  |
+            验证密码|AES(SharedKey, Ticket)---------------------------> |
+                    |                                                   |使用SaltHash2解密Ticket得到SaltHash1，
+                    |                                                   |使用SaltHash1计算出SaltHash2
+                    |                                                   |校验是否与数据库中的SaltHash2相同
+                    |                                                   |
+                    |                                                   |随机生成TempKey
+            获取票据|  <------ AES(SharedKey,AES(RandKey,TempKey+...))  |
+                    |                                                   |
+                    |    <--------- AES(TempKey,xxx)加密传输--------->  |
+        拖库后密码泄露的可能
+            攻击者知晓Salt1，Salt2，SaltHash2，由 
+                SaltHash2=SHA512(SaltHash1+uid+Salt2)
+                SaltHash1=bcrypt(SHA512(passwd),uid+Salt1,10) 
+                反解出密码是几乎不可能的
+        拖库后伪造登录
+            攻击者不知道原始密码，无法计算SaltHash1
+        拖库后伪造中间人
+            攻击者即使知道了SaltHash1，也无法反解出密码
+        攻击到此一步，可以通过升级Salt2来进行补救
+            用户正常的登录，服务端验证通过后，生成新的 Salt2 ，
+            然后根据传过来的 SaltHash1 重新计算了 SaltHash2 存入数据库。
+            下次用户再次登录时，获取到的是新的 Salt2 ，密码没有变，同样能登录，攻击者之前拖库的那份数据也失效了。
+
+
+
+
+
+
+
+
+
