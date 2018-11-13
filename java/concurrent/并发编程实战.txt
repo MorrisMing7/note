@@ -1,0 +1,148 @@
+volatile
+    声明变量的共享，阻止此变量上的操作与其他内存操作的重排序。并且volatile变量不会被缓存到寄存器或其他处理器不可见的地方。
+    因此，读取的volatile类型变量总是其最新写入的值。
+
+server模式的JVM会比client模式的做更多的优化
+    volatile boolean asleep；
+    ...
+        while(!asleep)
+            countSomeSheep();
+    上述代码中，若asleep未声明volatile，在server模式下，JVM会将asleep的判断提升到循环外，导致一个无限循环。
+
+volatile常用作某个操作的完成、终端或状态标志
+    当且仅当满足以下条件时，才应该使用volatile
+        对变量的写入操作不依赖于当前值，或能保证只有单个线程写入；
+        该变量不会与其他状态变量一起纳入不变性条件中；
+        访问时不需要加锁。
+
+发布与逸出
+    发布：使对象能够在当前作用域之外的代码中使用。
+    逸出：某个不该发布的对象被发布。
+    public class A{
+        public A(EventSource es){
+            es.registerListener(new EventListener(){
+                public void on Event(Event e){doSomething(e);}
+            });
+        }
+    }
+    当内部的EventListener实例发布时，外部的A实例也逸出了。
+    public class SafeListener{
+        private final EventListener listener;
+        private SafeListener(){
+            listener = new EventListener(){
+                public void onEvent(Event e){doSome(e);}
+            };
+        }
+        public static SafeListener newInstance(EventSource es){
+            SafeListener sl = new SafeListener();
+            es.registerListener(safe.listener);
+            return sl;
+        }
+    }
+
+线程封闭  
+    仅在单线程中访问数据。
+    JDBC中的Connection对象不要求是线程安全的，线程从连接池(连接池是线程安全的)获取connection对象，用其处理请求，隐含的将Connection对象封闭在线程中。
+    Ad-hoc封闭
+        完全由程序实现来承担
+    栈封闭
+        只能通过局部变量才能访问对象。局部变量是封闭在执行线程中的，程序员只需确保被引用对象不会逸出。
+        需要明确说明不可被逸出的需求，以防后续开发人员错误的将其逸出。
+    ThreadLocal类
+        通常用于防止对可变单实例变量或全局变量进行共享。
+        例：在单线程应用程序中可能需要维持一个全局的数据库连接，并且在程序启动时初始化之，从而避免调用每个方法都要传入一个Connection对象。
+            private static ThreadLocal<Connection> connectionHolder = new ThreadLocal<Connection>(){
+                    public Connection initialValue(){return DriverManager.getConnection(DB_URL);}
+                };
+            public static Connection getConnnection(){return connectionHolder.get();}
+        当某个频繁执行的操作需要一个临时对象，比如缓冲区，而又希望避免每次都重新分配该对象时，也可使用这种技术。
+        初次调用get方法时，就会initialValue来获取其初值。ThreadLocal<T>概念类似于Map<Thread,T>，但其实现并非Map，线程结束后，值会被回收。
+不变性 
+    不可变对象一定是线程安全的。
+    满足以下条件即为不可变对象
+        对象创建以后其状态不能修改；
+        对象的所有域都是final型；
+        对象时正确创建的（创建期间this引用没有逸出）
+    volatile发布不可变对象
+        例：获取某个数的因式分解（常常反复求解同一值的情形）
+            public class VolatileCachedFactorizer implements Servlet{
+                private volatile OneValueCache cache = new OneValueCache(null,null);//cache 用于缓存上次求解的值，用于下次直接获取结果
+                public void service(ServletRequest req, ServletResponse resp){
+                    BigInteger i = extractFromRequest(req);
+                    BigInteger[] factors = cache.getFactors(i);
+                    if(factors == null){facotrs = factor(i); cache = new OneValueCache(i,factors);}
+                    encodeInroResponse(resp,factors);
+                }
+            }
+安全发布    
+    可变对象必须通过安全的方式发布，即意味着在发布和使用的线程中必须使用同步。
+    一个正确构造的对象可以通过以下方式安全发布
+        在静态初始化函数中初始化一个对象的引用；
+        将对象引用保存到volatile域或者AtomicReference对象中；
+        将对象引用保存到某个正确构造的对象的final域中
+        将对象引用保存到一个由锁保护的域中
+    要发布一个静态构造对象，最简单与安全的方式是使用静态初始化器
+        public static Holder holder = new Holder(xx);//类的初始化阶段执行
+    事实上的不可变对象
+        必须通过安全方式来发布
+    可变对象
+        不仅必须通过安全方式来发布，而且必须是线程安全的或由锁保护。
+
+    共享对象的策略
+        线程封闭：只由一个线程拥有，对其他线程不可见
+        只读共享：任何线程不可修改，则无需额外同步
+        线程安全共享：在内部实现同步，通过对象公有接口访问而无需进一步同步
+        保护对象：只能通过持有特定锁来访问，包括封装在其他线程安全对象中的对象，以及已发布且由特定锁保护的对象
+
+阻塞队列·生产者-消费者
+    /**生产者将文件添加到阻塞队列*/
+    public class Producer implements Runnable{
+        private final BlockingQueue<File> fileQueue;
+        private final FileFilter fileFilter;
+        private final File root;
+        public void run(){
+            try{ crawl(root);}
+            catch (InterruptedException e){ Thread.currentThread().interruput();}
+        }
+        private void crawl(File root) throws InterruptedException{
+            File[] entries = root.listFiles(fileFilter);
+            if(entries != null){
+                for(File entry: entries)
+                    if(entry.isDirectory()) crawl(entry);
+                    else if(!alreadyIndexed(entry))
+                        fileQueue.put(entry);
+            }
+        }
+    }
+    /**消费者从队列中取出文件做一定操作*/
+    public class Customer implements Runnable{
+        private final BlockingQueue<File> queue;
+        public void run(){
+            try{ while(true) indexFile(queue.take()); }
+            catch (InterruptedException e){
+                Thread.currentThread().interrupt();
+            }
+        }
+    } 
+    /**启动*/
+    public static void startIndexing(File[] roots){
+        BlockingQueue<File> queue = new LinkedBlockingQueue<File>(BOUND);
+        FileFilter filter = new FileFilter(){
+            public boolean accept(File file){return true;}
+        };
+        for(File root:roots)
+            new Thread(new Producer(queue,filter,root)).start();
+        for(int i=0;i<N_CONSUMERS;i++)
+            new Thread(new Customer(queue)).start();
+    }
+串行线程封闭
+    对象所有权交付，安全的发布对象来转移所有权
+双端队列·工作密取
+    如果一个消费者完成自己队列的工作，可以从另个队列的队尾获取工作
+
+
+
+
+
+
+
