@@ -17,7 +17,8 @@
         将盐值混入用户输入的密码，并且使用同样的哈希函数进行加密
         比较上一步的结果和数据库储存的哈希值是否相同，如果相同那么密码正确，反之密码错误
 
-        客户端
+                 客户端                                              服务器
+                    |                                                   |
         输入账号密码|                                                   |DB存储：Salt1，Salt2，SaltHash2
                     |生成公私钥(a,A)                        公私钥(b,B) |
                     |                                                   |
@@ -31,7 +32,7 @@
                     |SaltHash2=SHA512(SaltHash1+uid+Salt2)              |
                     |Ticket=AES(SaltHash2, uid+time+SaltHash1+RandKey)  |
             验证密码|AES(SharedKey, Ticket)---------------------------> |
-                    |                                                   |使用SaltHash2解密Ticket得到SaltHash1，
+                    |                                                   |使用DB中的SaltHash2解密Ticket得到SaltHash1，
                     |                                                   |使用SaltHash1计算出SaltHash2
                     |                                                   |校验是否与数据库中的SaltHash2相同
                     |                                                   |
@@ -52,10 +53,14 @@
             用户正常的登录，服务端验证通过后，生成新的 Salt2 ，
             然后根据传过来的 SaltHash1 重新计算了 SaltHash2 存入数据库。
             下次用户再次登录时，获取到的是新的 Salt2 ，密码没有变，同样能登录，攻击者之前拖库的那份数据也失效了。
+http协议
+    常用的请求方法有GET、HEAD、POST
 
+js闭包
+    
+页面刷新·变量保存
 
-
-
+MySQL
 
 
 
