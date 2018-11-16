@@ -117,7 +117,9 @@
             只读共享：任何线程不可修改，则无需额外同步
             线程安全共享：在内部实现同步，通过对象公有接口访问而无需进一步同步
             保护对象：只能通过持有特定锁来访问，包括封装在其他线程安全对象中的对象，以及已发布且由特定锁保护的对象
-对象组合
+******************
+**    对象组合
+******************
     线程安全类的三个要素
         构成对象状态的所有变量
         约束状态变量的不变性条件
@@ -149,8 +151,9 @@
             public synchronized void clear(){list.clear();}
             //...按照类似的方式委托List的其他方法
         }
-
+****************
 基础构建模块
+****************
     同步容器类
         对每个公有方法进行同步，使得每次只有一个县城可以访问容器的状态
         此类容器在进行一些常见的复合操作：迭代、跳转(按指定顺序找到下个元素)、条件运算(如：若没有则添加) 时，
@@ -256,25 +259,164 @@
                         catch (InterruptedException e) {Thread.currentThread().interrupt(); }//重新设置中断标示
                     }
                 }
-    同步工具类
-        /** 创建nThreads个线程，运行task，统计运行时间*/
-        public long timeTasks(int nThreads, final Runnable task) throws InterruptedException{
-            final CountDownLatch startGate = new CountDownLatch(1);
-            final CountDownLatch endGate = new CountDownLatch(nThreads);
-            for (int i=0; i<nThreads; i++){
-                Thread t = new Thread(){  public void run(){
-                        try{ starGate.await();
-                            try{ task.run();}
-                            finally{ endGate.countDown();}
-                        } catch (InterruptedException ignored){}
-                }};
-                t.start();
-            long start = System.nanoTime();
-            starGate.countDown();
-            endGate.await();
-            long end = System.nanoTime();
-            return end-start;
+    同步工具类        
+        闭锁
+                确保某个计算在所有资源都被初始化后才继续进行。或某个操作的所有参与者都就绪后才继续执行。
+          CountDownLatch
+            /** 创建nThreads个线程，运行task，统计运行时间*/
+            public long timeTasks(int nThreads, final Runnable task) throws InterruptedException{
+                final CountDownLatch startGate = new CountDownLatch(1);
+                final CountDownLatch endGate = new CountDownLatch(nThreads);
+                for (int i=0; i<nThreads; i++){
+                    Thread t = new Thread(){  public void run(){
+                            try{ starGate.await();
+                                try{ task.run();}
+                                finally{ endGate.countDown();}
+                            } catch (InterruptedException ignored){}
+                    }};
+                    t.start();
+                long start = System.nanoTime();
+                starGate.countDown();
+                endGate.await();
+                long end = System.nanoTime();
+                return end-start;
+            }
+          FutureTask
+            可生成结果的计算。计算通过Callable实现，可处于3种状态：等待运行，正在运行，运行完成。
+            Future.get()的行为：完成则取回计算结果，否则阻塞到任务完成，取回结果或抛出异常。
+                public class Preloader{
+                    private final FutureTask<ProductInfo> future = new FutureTask<ProductInfo>(
+                        new Callable<ProductInfo>(){ public ProductInfo call() throws DataLoadException {return loadProductInfo();}
+                    });
+                    private final Thread loaderThread = new Thread(future);
+                    public void start(){ loaderThread.start();}
+                    public ProductInfo get() throws DataLoadException, InterruptedException{
+                        try{ return future.get(); }
+                        catch (ExecutionException e){
+                            Throwable cause = e.getCause();
+                            if(cause instaceof DataLoadException)
+                                throw (DataLoadException) cause;
+                            else throw launderThrowable(cause);
+                        }
+                    }
+                }
+        信号量
+            Semaphore种管理者一组虚拟许可，初始数量由构造函数指定。执行操作是先获取许可，使用以后释放许可。若当前没有许可acquire则阻塞至有许可(或被中断、超时)。初始值为1的Semaphore可以用作互斥体(mutex)，且具备不可重入的加锁语义。
+            用以控制访问"某个特定资源"或"执行指定操作"的数量，实现某种资源池，对容器施加边界
+                public class BoundedHashSet<T> {
+                    private final Set<T> set;
+                    private final Semaphore sem;
+                    public BoundedHashSet(int bound){
+                        this.set = Collections.synchronizedSet(new HashSet<T>());
+                        this.sem = new Semaphore(bound);
+                    }
+                    public boolean add(T o) throws InterruptedException{
+                        sem.acquired();
+                        boolean wasAdded = false;
+                        try{ wasAdded = set.add(o); return wasAdded;}
+                        finally{ if(!wasAdded) sem.release(); }
+                    }
+                    public boolean remove(T o){
+                        boolean wasRemoved=set.remove(o);
+                        if(wasRemoved) sem.relase();
+                        return wasRemoved;
+                    }
+                }
+        栅栏
+            Barrier类似于闭锁，所有事件到达同一位置时才继续执行，即等待其他线程。
+            CyclicBarrier 
+                CyclicBarrier(int parties) 
+                CyclicBarrier(int parties, Runnable barrierAction) 
+                    parties为线程数量，barrierAction为所有线程到达后执行内容
+                await()
+    构建高效可伸缩结果缓存
+        public interface Computable<A,V>{ V compute(A arg) throws InterruptedException; }
+        public class SomeFunction implements Computable<String, BigInteger> {
+            public BigInteger compute(String s){ ...; return xxx; }
         }
+        public Memoizer<A,V> implements Computable<A, V> {
+            private final ConcurrentMap<A,V> cache = new ConcurrentHashMap<A, FutureTask<V>>();
+            private final Computable<A,V> c;
+            public Memoizer(Computable<A,V> c){ this.c = c;}
+            public V compute(final A arg) throws InterruptedException{
+                while(true){
+                    Future f = cache.get(arg);
+                    if( f==null ){
+                        FutureTask<V> ft = new FutureTask<V>(new Callable<V>(){
+                            public V call() throws InterruptedException{ return c.compute(arg); }
+                        });
+                        f = cache.putIfAbsent(arg,ft);//返回arg前一个映射的值，或空值
+                        if( f==null){ f=ft; ft.run();}
+                    }
+                    try{ return f.get(); }
+                    catch (CancellationException e){ cache.remove(arg, f); }
+                    catch (EcecutionException e){ throw launderThrowable(e.getCause());}
+                }
+            }
+        }
+    并发技巧
+        尽量声明final，除非需要他们是可变的；
+        不可变对象一定是线程安全的；
+        封装有助于管理复杂性；
+        用锁保护每个可变变量；
+        保护同一个不变性条件，用同一个锁；
+        复合操作要持有锁；
+        在文档中指出非线程安全，或做线程安全的设计；
+        同步策略文档化；
+****************************************************************
+
+****************************************************************
+********************    结构化并发应用程序  ******************** 
+****************************************************************
+
+任务执行
+    基于Executor的web服务器
+        class TaskExecutionWebServer{
+            private static final int NTHREADS = 100;
+            private static final Executor exec = Executors.newFixedThreadPool(NTHREADS);
+            public static void main(String[] args) throws IOException{
+                ServerSocket socket = new ServerSocket(80);
+                while(true){
+                    final Socket connection = socket.accept();
+                    Runnable task = new Runnable(){ public void run(){ handleRequest(connetction);} };
+                    exec.execute(task);
+                }
+            }
+        }
+    支持关闭的Web服务器
+        ExecutorService生命周期：运行、关闭、已终止。
+        shutdown平缓的关闭：不在接受任务，等待已经提交(包括尚未开始的)的任务完成.
+        shutdownNow：取消所有执行中的任务，并不再启动队列中的任务。
+        关闭后提交的任务由"拒绝执行处理器"处理，是execute方法抛出RejectedExecutionException。
+        所有任务完成后，ExecutorService进入终止状态。
+        可以调用awaitTermination来等待其到达终止。
+        class LifecycleWebServer{
+            private final ExecutorService exec = ...;
+            public void start() throws IOException {
+                ServerSocket socket = new ServerSocket(80);
+                while(!exec.isShutdown()){
+                    try{
+                        final Socket conn = socket.accept();
+                        exec.execute(new Runnable(){publi void run(){ handleRequest(conn);}});
+                    }catch (RejectedExecutionException e){
+                        if(!exec.isShutdown()) log("task submission rejected", e);
+                    }
+                }
+            }
+            public void stop(){ exec.shutdown();}
+            void handleRequest(Socket conn){
+                Request req = readRequest(conn);
+                if( isShutdownRequest(req)) stop();
+                else dispatchRequest(req);
+            }
+        }
+    延迟与周期任务
+        Timer类：基于绝对时间，因此任务执行对系统时钟变化敏感；
+        ScheduledThreadPoolExecutor来代替：基于相对时间调度。
+        Timer：只会创建一个线程执行所有定时任务。若任务持续时间过长，则会影响其他TimerTask的定时准确性。例如；周期10ms的任务，若有一个任务执行了40ms，可能此任务执行完后快速连续调用4次或直接失去4次调用。
+        若TimerTask抛出一个未检查的异常，则整个Timer被取消。已经被调度但尚未执行的TimerTask不会再执行，新的任务也不能被调度————"线程泄漏"
+            少用Timer
+        DelayQueue：只有某个元素逾期之后才能执行take，从DelayQueue中返回的对象根据其延迟时间排序
 
 
 
