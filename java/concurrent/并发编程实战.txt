@@ -370,53 +370,202 @@
 ****************************************************************
 
 任务执行
-    基于Executor的web服务器
-        class TaskExecutionWebServer{
-            private static final int NTHREADS = 100;
-            private static final Executor exec = Executors.newFixedThreadPool(NTHREADS);
-            public static void main(String[] args) throws IOException{
-                ServerSocket socket = new ServerSocket(80);
-                while(true){
-                    final Socket connection = socket.accept();
-                    Runnable task = new Runnable(){ public void run(){ handleRequest(connetction);} };
-                    exec.execute(task);
-                }
-            }
-        }
-    支持关闭的Web服务器
-        ExecutorService生命周期：运行、关闭、已终止。
-        shutdown平缓的关闭：不在接受任务，等待已经提交(包括尚未开始的)的任务完成.
-        shutdownNow：取消所有执行中的任务，并不再启动队列中的任务。
-        关闭后提交的任务由"拒绝执行处理器"处理，是execute方法抛出RejectedExecutionException。
-        所有任务完成后，ExecutorService进入终止状态。
-        可以调用awaitTermination来等待其到达终止。
-        class LifecycleWebServer{
-            private final ExecutorService exec = ...;
-            public void start() throws IOException {
-                ServerSocket socket = new ServerSocket(80);
-                while(!exec.isShutdown()){
-                    try{
-                        final Socket conn = socket.accept();
-                        exec.execute(new Runnable(){publi void run(){ handleRequest(conn);}});
-                    }catch (RejectedExecutionException e){
-                        if(!exec.isShutdown()) log("task submission rejected", e);
+    Executor框架
+        接口
+            public interface Executor{ void execute(Runnable command); }
+            使用Runnable作为任务抽象，有局限：不能返回值或抛出受检查的异常-->ExecutorService使用Future做任务抽象
+        基于Executor的web服务器
+            class TaskExecutionWebServer{
+                private static final int NTHREADS = 100;
+                private static final Executor exec = Executors.newFixedThreadPool(NTHREADS);
+                public static void main(String[] args) throws IOException{
+                    ServerSocket socket = new ServerSocket(80);
+                    while(true){
+                        final Socket connection = socket.accept();
+                        Runnable task = new Runnable(){ public void run(){ handleRequest(connetction);} };
+                        exec.execute(task);
                     }
                 }
             }
-            public void stop(){ exec.shutdown();}
-            void handleRequest(Socket conn){
-                Request req = readRequest(conn);
-                if( isShutdownRequest(req)) stop();
-                else dispatchRequest(req);
-            }
+        线程池
+            Executors中的静态工厂方法创建一个线程池
+                newFixedThreadPool 固定长度的线程池，提交一个任务创建一个线程，直到到达设定最大值，规模不再变化（某个线程发生未预期Exception而结束，则会补充一个）
+                newCacheThreadPool 规模不受限制，当当前规模超过处理需求，则会回收空闲线程。
+                newSingleThreadPool 创建单个线程执行任务，若线程异常而结束，则创建另一个代替之(提供大量同步机制，即使线程不时被替代，总是可以使对象安全的封闭在“任务线程”中)，能确保依照任务在队列中的顺序串行执行。
+                newScheduledThreadPool 类似于Timer，固定长度的线程池，以延迟或定时方式执行任务。
+        Executor生命周期
+            JVM会在所有非守护线程结束后才退出，若无法正确关闭Executor，那么JVM会无法结束
+        public interface ExecutorService extends Executor{
+            void shutdown();  //平缓的关闭：不在接受任务，等待已经提交(包括尚未开始的)的任务完成.
+            List<Runnable> shutdownNow();  //取消所有执行中的任务，并不再启动队列中的任务。
+            boolean isShutdown();
+            boolean isTerminated();
+            boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException; //等待ExecutorService进入终止状态
+            ...
         }
-    延迟与周期任务
-        Timer类：基于绝对时间，因此任务执行对系统时钟变化敏感；
-        ScheduledThreadPoolExecutor来代替：基于相对时间调度。
-        Timer：只会创建一个线程执行所有定时任务。若任务持续时间过长，则会影响其他TimerTask的定时准确性。例如；周期10ms的任务，若有一个任务执行了40ms，可能此任务执行完后快速连续调用4次或直接失去4次调用。
-        若TimerTask抛出一个未检查的异常，则整个Timer被取消。已经被调度但尚未执行的TimerTask不会再执行，新的任务也不能被调度————"线程泄漏"
-            少用Timer
-        DelayQueue：只有某个元素逾期之后才能执行take，从DelayQueue中返回的对象根据其延迟时间排序
+            关闭后提交的任务由"拒绝执行处理器"处理，是execute方法抛出RejectedExecutionException。
+            所有任务完成后，ExecutorService进入终止状态。
+            可以调用awaitTermination来等待其到达终止。
+        支持关闭的Web服务器
+            class LifecycleWebServer{
+                private final ExecutorService exec = ...;
+                public void start() throws IOException {
+                    ServerSocket socket = new ServerSocket(80);
+                    while(!exec.isShutdown()){
+                        try{
+                            final Socket conn = socket.accept();
+                            exec.execute(new Runnable(){publi void run(){ handleRequest(conn);}});
+                        }catch (RejectedExecutionException e){
+                            if(!exec.isShutdown()) log("task submission rejected", e);
+                        }
+                    }
+                }
+                public void stop(){ exec.shutdown();}
+                void handleRequest(Socket conn){
+                    Request req = readRequest(conn);
+                    if( isShutdownRequest(req)) stop();
+                    else dispatchRequest(req);
+                }
+            }
+        延迟与周期任务
+            Timer类：基于绝对时间，因此任务执行对系统时钟变化敏感；
+            ScheduledThreadPoolExecutor来代替：基于相对时间调度。
+            Timer：只会创建一个线程执行所有定时任务。若任务持续时间过长，则会影响其他TimerTask的定时准确性。例如；周期10ms的任务，若有一个任务执行了40ms，可能此任务执行完后快速连续调用4次或直接失去4次调用。
+            若TimerTask抛出一个未检查的异常，则整个Timer被取消。已经被调度但尚未执行的TimerTask不会再执行，新的任务也不能被调度————"线程泄漏"
+                少用Timer
+            DelayQueue：只有某个元素逾期之后才能执行take，从DelayQueue中返回的对象根据其延迟时间排序
+    可利用的并行性
+        串行浏览器渲染程序
+            public class SingleThreadRender{
+                void renderPage(charSequence source){
+                    renderText(source);
+                    List<ImageData> imgData = new ArrayList<ImageData>();
+                    for(ImageInfo imgInfo = scanForImageInfo(source))
+                        imgData.add(imgInfo.downloadImage());
+                    for(ImageData data:imgData)
+                        renderImage(data);
+                }
+            }
+        Callable与Future接口
+            public interface Callable<V>{ V call() throws Exception; }
+            public interface Future<V>{
+                boolean cancel(boolean mayInterruptIfRunning);
+                boolean isCancelled();
+                boolean isDone();
+                V get() throws InterrptedException, ExecutionException, CancellationException;
+                V get(long timeout, TimeUnit unit) throws  InterrptedException, ExecutionException, CancellationException, TimeoutException;
+            }
+            ExecutorService中的所有submit方法都返回一个Future            
+            Executor执行的任务由4个生命周期阶段：创建、提交、开始、完成。已提交但未开始的任务可以取消。但开始的任务只有在响应中断时才能取消。
+        使用Future等待图像下载
+            public class FutureRender{
+                private final ExecutorService executor = ...;
+                void renderPage(charSequence source){
+                    final List<ImageInfo> infos = scanForImageInfo(source);
+                    Callable<List<ImageData>> task = new Callable<List<ImageData>>(){
+                        List<ImageData> call(){
+                            List<ImageData> result = new ArrayList<ImageData>();
+                            for(ImageInfo i : infos) result.add(i.downloadImage());
+                            return result;
+                        }
+                    };
+                    Future<List<ImageData>> future = executor.submit(task);
+                    renderText(source);
+                    try{
+                        List<ImageData> imgData = future.get();
+                        for(ImageData data:imgData)
+                            renderImage(data);
+                    }catch (InterruptedException e){
+                        Thread.currentThread().interrupt(); //重新设置中断状态
+                        future.cancel(true);  //不再需要结果，故取消
+                    }catch (ExcutionException e){ throw launderThrowable(e.getCause()); }
+                }
+            }
+        异构任务在并行化中存在的局限
+            在上个例子中，渲染页面与图像下载是两个不同类型的任务。在任务类型不同时，可能出现任务大小不同而出现性能提升并不大的情况。即当渲染页面速度远小于下载图像时，程序最终的性能与串行执行差别并不大
+        CompletionService: Executor + BlockingQueue
+            向Executor提交一组计算任务，并且希望计算后取得结果；可以保留与每个任务相关联的Future，反复使用get方法(将timeout指定为0，通过轮训来判断任务是否完成)。
+            CompletionService将Executor与BlockingQueue融合：将Callable任务提交给它执行，后使用类似于队列操作的take（阻塞）与poll（空值)方法取得已完成的结果，这些结果会在完成时封装为Future。
+            ExecutorCompletionService：在构造函数中创建一个BlockingQueue来保存计算完成结果；计算完成时调用Future-Task中的done方法；在任务提交时，将其包装为一个QueueingFuture（extend FutureTask），改写了其done方法，将结果放入BlockingQueue
 
+            public class Render{
+                private final ExecutorService executor = ...;
+                void renderPage(charSequence source){
+                    final List<ImageInfo> infos = scanForImageInfo(source);
+                    ExecutorCompletionService<ImageData> completionService = new ExecutorCompletionService<ImageData>(executor);
+                    for(final ImageInfo i : infos) 
+                        completionService.submit(new Callable<ImageData>(){public ImageData call(){ return i.downloadImage(); }});    
+                    Future<List<ImageData>> future = executor.submit(task);
+                    renderText(source);
+                    try{
+                        for(int i=0;i<infos.size(); t++){
+                            Future<ImageData> imgFuture = completionService.take();
+                            ImageData img= imageFuture.get();
+                            renderImage(img);
+                    }catch (InterruptedException e){
+                        Thread.currentThread().interrupt(); //重新设置中断状态
+                    }catch (ExcutionException e){ throw launderThrowable(e.getCause()); }
+                }
+            }
+        任务的时限
+            //广告案例：超时则显示默认广告
+            try{
+                long timeLeft = endNanos - System.nanoTime();
+                Ad ad = future.get(timeLeft,NANOSECONDS);
+            } catch (ExecutionException e){ ad = DEFAULT_AD;}
+            catch (TimeoutException e){ad = DEFAULT_AD; f.cancel(true);}
+            ExecutorService中
+            List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)  按照任务集合中，迭代器的顺序将Future提交到返回的集合中
 
+*********
+* 取消与关闭*
+*************
+    任务取消
+            用户请求取消：点击图形界面的"取消"按钮
+            时限操作：超时取消所有任务
+            应用程序事件：对某问题进行分解并搜索，当其中一个任务找到解决放弃，其他任务都应取消。
+            错误：如爬虫任务并存盘，当一个任务发生错误如磁盘满，那所有任务都会取消，保存现有状态，以便重新启动。
+            关闭：应用程序或服务关闭时，必须对正在处理以及待处理任务执行某种操作
+         java没有一种安全的抢占式方法停止线程,只有一些协作的机制。
+         使用volatile域来保存取消状态
+             @ThreadSafe
+             public class PrimeGenerator implements Runnable{
+                @GuardedBy("this")
+                private final List<BigInteger> primes = new ArrayList<BigInteger>;
+                private volatile boolean cancelled;
+                public void cancel(){ cancelled = true; }
+                public void run(){ 
+                    BigInteger p = BigInteger.ONE;
+                    while(!cancelled){
+                        p=p.nextProbablePrime();
+                        synchronized(this){primes.add(p);}
+                    }
+                }
+                public synchronized List<BigInteger> get(){
+                    return new ArrayList<BigInteger>(primes);
+                }
+            }
 
+        中断
+            调用interrupt并不意味着立即停止线程，而只是传递了中断消息
+            除非知道中断对于一个线程的意义，否则就不该中断该线程
+                public class Thread{
+                    public void interrupt(){...}
+                    public boolean isInterrupted(){...}
+                    public static boolean interrupted(){...} //清除并返回当前的中断状态
+                }
+            若上例中使用BlockingQueue代替List，任务可能无法检查取消标志而无法结束：当生产者速度超过消费者，队列被填满，queue.put(xxx)将会阻塞，其他线程即使调用cancel企图取消任务时，由于阻塞的存在而使线程无法到达检查代码的位置，而无法退出线程。
+            当线程在非阻塞状态下中断，中断状态被设置，如果不触发InterruptedException，那么中断状态一直保持，直到明确地清除之。
+          使用中断取消
+             public class PrimeProducer extends Thread{
+                private final BlockingQueue queue ;
+                public PrimeProduce(BlockingQueue q){this.queue = q;}
+                public void cancel(){ interrupt(); }
+                public void run(){ 
+                    try{
+                        BigInteger p = BigInteger.ONE;
+                        while(!Thread.currentThread().isInterrupted())
+                            queue.put(p=p.nextProbablePrime());
+                    }catch(InterruptedExecption e){/*允许线程退出*/}
+                }
+            }
