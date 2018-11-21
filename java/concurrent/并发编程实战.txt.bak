@@ -621,7 +621,7 @@
                 cancelExec.schedule(new Runnable(){ public run(){ taskThread.interrupt(); }},
                     timeout, unit);     //在一个专门的线程中中断任务r
                 taskThread.join(unit.toMillis(timeout));
-                task.rethrow();         //重新抛出异常
+                task.rethrow();
             }
             任务将在另一个线程中执行，故当其抛出一个未检查的异常时，这个异常可能被忽略(不显式处理)。
                 故需要保存这个异常，上例中使用RethrowbaleTask中的volatile域。
@@ -632,44 +632,6 @@
                     cancelExec.schedule(new Runnable(){public void run(){selfThread.interrupt(); }}, timeout, unit);
                     r.run();
                 }
-                在中断线程前，应该了解其中断策略。timedRun可能被任何一个线程调用，因此而不清楚该线程的中断策略。
-        使用Future取消任务 
-            private ExecutorService taskExec = ..;
-            public static void timedRun(Runnable r, long timeout, TimeUnit unit) throws InterruptedException{
-                Future<?> task = taskExec.submit(r);
-                try{ task.get(timeout,unit); }
-                catch (TimeOutException e){ /*任务被取消*/ }
-                catch (ExecutionExcepiton e){ throw launderThrowable(e.getCause()); }
-                finally{ task.cancel(true); } //取消正在运行的任务，若任务已完成则无影响
-            }
-        处理不可中断的阻塞
-            同步Socket I/O：InputStream与OutputStream的read与write方法不会响应中断，可以通过关闭底层的套接字，
-                使得由于执行read或write而阻塞的进程抛出SocketException
-                public class ReaderThread extends Thread{
-                    private final Socket socket;
-                    private final InputStream in;
-                    public ReaderThread(Socket s)throws IOException{ this.socket = s; this.in = s.getInputStream(); }
-                    public void interrupt(){
-                        try{ socket.close(); } catch (IOException ignored){} finally{super.interrupt();}
-                    }
-                    public void run(){
-                        try{
-                            byte[] buf = new byte[BUFSZ];
-                            while(true){
-                                int count = in.read(buf);
-                                if(count<0)break;
-                                else if(count>0) processBuffer(buf,count);
-                            }
-                        }catch (IOException e){ /*允许线程退出*/ }
-                    }
-                }                        
-            同步I/O：当中断一个在InterruptedChannel上等待的线程时，将抛出ClosedByInterruptException并关闭链路
-                (同时使得在这条链路上阻塞的其他线程同样抛出ClosedByInterrupteException)
-            Selector的异步I/O：线程在调用Selector.select方法时阻塞，调用close或wakeup会使线程抛出ClosedSelectorException，
-                并提前返回。
-            获取某个锁：若线程由于等待某个内置锁而阻塞，则无法响应中断。
-                Lock类中提供lockInterruptibly方法，允许在等待一个锁的同时仍能响应中断
-            
-		            	
+                在中断线程前，应该了解其中断策略。timedRun可能被任何一个线程调用，而在不清楚该线程的中断策略时
 
             
