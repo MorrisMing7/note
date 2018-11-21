@@ -548,7 +548,6 @@
 
         中断
             调用interrupt并不意味着立即停止线程，而只是传递了中断消息
-            除非知道中断对于一个线程的意义，否则就不该中断该线程
                 public class Thread{
                     public void interrupt(){...}
                     public boolean isInterrupted(){...}
@@ -569,3 +568,29 @@
                     }catch(InterruptedExecption e){/*允许线程退出*/}
                 }
             }
+        中断策略
+            线程级或服务级的取消操作，尽快退出，在必要时进行清理，通知某个所有者该线程已退出。
+            如果出了将InterruptedException传递给调用者外还需要执行其他操作，那么应该在捕获InterruptedException之后恢复中断状态
+                Thread.currentThread().interrupt();
+            除非知道中断对于一个线程的意义，否则就不该中断该线程
+        响应中断
+            传递异常：(可能在执行某个特定任务清除操作之后) 从而使你的方法成为可中断的阻塞方法
+            恢复中断状态：从而使调用栈中的上层代码能够对其进行处理
+            只有实现了中断策略的代码可以屏蔽中断请求，在常规任务与库代码中都不应屏蔽中断请求。
+            如果不想或无法传递InterruptedException（通过Runnable）定义任务，那么需要寻找另一种方式保存中断请求，一种标准的方法就是再次调用interrupt来恢复中断状态。
+            不可取消的方法中调用可中断的阻塞方法时：在循环中调用该可中断阻塞方法，发现中断后保存中断状态，并重新尝试；在返回前恢复中断状态，从而告知调用者发生了中断
+                public Task getNextTask(BlockingQueue<Task> queue){//所谓不可取消指方法本身
+                    boolean interrupted = false;
+                    try{
+                        while(true){
+                            try{return queue.take();}
+                            catch (InterruptedException e){ interrupted = true; }//保存状态并重试
+                        }
+                    }finally{
+                        if(interrupted) Thread.currentThread.interrupt(); //
+                    }
+
+
+
+
+            
