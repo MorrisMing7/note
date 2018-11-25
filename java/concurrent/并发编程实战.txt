@@ -645,6 +645,7 @@
         处理不可中断的阻塞
             同步Socket I/O：InputStream与OutputStream的read与write方法不会响应中断，可以通过关闭底层的套接字，
                 使得由于执行read或write而阻塞的进程抛出SocketException
+                //将非标准的取消操作封装在Thread中的interrupt方法
                 public class ReaderThread extends Thread{
                     private final Socket socket;
                     private final InputStream in;
@@ -662,7 +663,17 @@
                             }
                         }catch (IOException e){ /*允许线程退出*/ }
                     }
-                }                        
+                }  
+                //使用newTaskFor来封装非标准的取消
+                /*  public abstract class AbstractExecutorService extends Object implements ExecutorService{
+                    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable)  }
+                */
+                public interface CancellableTask<T> extends Callable<T>{
+                    void cancel();
+                    RunnableFuture<T> newTask();
+                }
+                @ThreadSafe
+
             同步I/O：当中断一个在InterruptedChannel上等待的线程时，将抛出ClosedByInterruptException并关闭链路
                 (同时使得在这条链路上阻塞的其他线程同样抛出ClosedByInterrupteException)
             Selector的异步I/O：线程在调用Selector.select方法时阻塞，调用close或wakeup会使线程抛出ClosedSelectorException，
