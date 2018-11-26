@@ -269,14 +269,14 @@
                 final CountDownLatch endGate = new CountDownLatch(nThreads);
                 for (int i=0; i<nThreads; i++){
                     Thread t = new Thread(){  public void run(){
-                            try{ starGate.await();
+                            try{ startGate.await();
                                 try{ task.run();}
                                 finally{ endGate.countDown();}
                             } catch (InterruptedException ignored){}
                     }};
                     t.start();
                 long start = System.nanoTime();
-                starGate.countDown();
+                startGate.countDown();
                 endGate.await();
                 long end = System.nanoTime();
                 return end-start;
@@ -325,7 +325,7 @@
                     }
                 }
         栅栏
-            Barrier类似于闭锁，所有事件到达同一位置时才继续执行，即等待其他线程。
+            Barrier类似于闭锁，所有事件到达同一位置时才继续执行，即等待其他线程。可以循环使用。
             CyclicBarrier 
                 CyclicBarrier(int parties) 
                 CyclicBarrier(int parties, Runnable barrierAction) 
@@ -1041,6 +1041,79 @@
             原子变量：提供了一种降低更新热点域开销的方式、静态计数器、序列发生器
         监测CPU
             unix系统的vmstat与mpstat命令
+            windows的perfmon
+            cpu利用不充分的原因
+                负载不充足：测试程序负载不够多，增加负载，检查利用率、响应时间、服务时间等指标的变化
+                I/O密集：iostat 或perfmon
+                外部限制：依赖于某个外部服务，如数据库或Web服务，性能瓶颈可能不在代码中
+                锁竞争：线程转储信息中“waiting to lock monitor”
+            不使用对象池
+                对象的分配操作开销比同步更低
+
+
+************
+* 并发程序测试 *
+****************
+    正确性测试
+        阻塞的测试
+            void test(){//测试一个必然阻塞的方法，以及其对中断的响应
+                final Xxx obj=...; //被测对象
+                Thread testThread = new Thread(){public void run(){
+                    try{obj.xxx();fail();/*没有阻塞，执行到此则说明出现了错误*/}
+                    catch(InterruptedException success){}
+                }};
+                try{
+                    testThread.start();
+                    testThread.sleep(LOCKUP_DETECT_TIMEOUT);
+                    testThread.interrupt();
+                    testThread.join(LOCKUP_DETECT_TIMEOUT);
+                    assertFalse(testThread.isAlive());
+                }catch(Exception unexpected){fail();}
+            }
+        安全测试
+            测试线程数要多于cpu数
+            线程创建与启动需要较大的开销，如果线程执行时间较短，并在循环中启动大量这种线程，最坏的情况是
+                这些线程将串行执行。先执行的线程将提前完成，即重叠部分很少
+                    t1: ccaxxxx
+                    t2: --ccaxxxx
+                    t3: ----ccaxxxx
+                    t4: ------ccaxxxx
+                使用两个CountDownLatch作为开始S和结束阀门E或使用CyclicBarrier也可
+                    t1: ccaS-------xxxxE
+                    t2: --ccaS-----xxxxE
+                    t3: ----ccaS---xxxxE
+                    t4: ------ccaS-xxxxE
+                    t0:-----------SE----(主线程继续）
+        伪随机数生成器
+            public static int xorShift(int y){
+                y^=(y<<6);
+                y^=(y>>>21);
+                y^=(y<<7);
+                return y;
+            }
+        资源泄露
+            class Big{double[] data = new double[10000];}
+            void testLeak()throws InterruptedException{
+                BoundedBuffer<Big> bb = new BoundedBuffer<Big>(CAPACITY);
+                int heapSize1 = /*堆快照生成*/;
+                for(...)bb.put(new Big);
+                for(...)bb.take();
+                int heapSize2 = /*堆快照生成*/;
+                assertTrue(Math.abs(heapSize1-heapSize2)<THRESHOLD);
+            }
+        产生更多的交替操作
+            在代码中使用Thread.yield()来产生更多的上下文切换（取决于平台，JVM可能将其实现为空操作）
+            public synchronized void transferCredits(Account from,Account to, int amount){
+                from.setBalance(from.getBalance()-amount);
+                if(xxxx) Thread.yield();        
+                to.setBalance(to.getBalance()+amount);
+            }
+    性能测试
+        
+
+
+
+
 
                 
 
