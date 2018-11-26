@@ -528,9 +528,9 @@
             List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)  
                 按照任务集合中，迭代器的顺序将Future提交到返回的集合中
 
-*********
-* 取消与关闭*
-*************
+**************
+* 取消与关闭 *
+**************
     任务取消
             用户请求取消：点击图形界面的"取消"按钮
             时限操作：超时取消所有任务
@@ -664,16 +664,6 @@
                         }catch (IOException e){ /*允许线程退出*/ }
                     }
                 }  
-                //使用newTaskFor来封装非标准的取消
-                /*  public abstract class AbstractExecutorService extends Object implements ExecutorService{
-                    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable)  }
-                */
-                public interface CancellableTask<T> extends Callable<T>{
-                    void cancel();
-                    RunnableFuture<T> newTask();
-                }
-                @ThreadSafe
-
             同步I/O：当中断一个在InterruptedChannel上等待的线程时，将抛出ClosedByInterruptException并关闭链路
                 (同时使得在这条链路上阻塞的其他线程同样抛出ClosedByInterrupteException)
             Selector的异步I/O：线程在调用Selector.select方法时阻塞，调用close或wakeup会使线程抛出ClosedSelectorException，
@@ -681,7 +671,11 @@
             获取某个锁：若线程由于等待某个内置锁而阻塞，则无法响应中断。
                 Lock类中提供lockInterruptibly方法，允许在等待一个锁的同时仍能响应中断
 		newTaskFor封装非标准的阻塞
-			newTaskFor是ThreadPoolExecutor中的一个工厂方法，创建Future来代表任务
+			newTaskFor是ThreadPoolExecutor中的一个工厂方法，
+                /*  public abstract class AbstractExecutorService extends Object implements ExecutorService{
+                    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable)  }
+                */
+                创建Future来代表任务
 				通过定制任务的Future可以改变Future.cancel的行为。
 	        public interface CallableTask<T> extends Callable<T>{
                 void cancel();
@@ -803,4 +797,251 @@
                 //将ExecutorService的其他方法委托给exec
             }
     处理非正常线程终止
+        典型的线程池工作者线程结构
+            public void run(){
+                Throwable thrown = null;
+                try{ while(!isInterrupted()) runTask(getTaskFromWorkQueue());}
+                catch (Throwable e){ thrown = e; }
+                finally{ threadExited(this,thrown); }
+            }
+        未捕获的异常处理
+            public Interface UncaughtExceptionHandler{ void uncaughtException(Thread t,Throwable e); }
+            JVM会将由于未捕获异常而退出线程的事件报告给应用程序提供的UncaughtExceptionHandler异常处理器。
+                若程序未提供任何异常处理器，默认行为是将栈追踪信息输出到System.err。
+            public class UEHLogger implements Thread.UncaughtExceptionHandler{ 
+                void uncaughtException(Thread t,Throwable e){
+                    Logger logger = Logger.getAnonymousLogger();
+                    logger.log(Level.SEVERE, "Thread terminated with exception: " + t.getName(), e);
+                } 
+            }
+            通过为ThreadPoolExecutor的构造函数提供一个ThreadFactory，来为线程池中的所有线程设置异常处理器。
+            标准线程池允许发生未捕获异常时结束线程，由于使用try-finally来接收通知，线程结束后，会有新的形成代替它，
+                若没有提供异常处理器或其他故障通知机制，任务会悄悄失败。
+                将任务封装在能捕获异常的Runnable或Callable中，或改写ThreadPoolExecutor的afterExectue(Runnable r,Throwable t)方法。
+            只有execute提交的任务可以将异常交给异常处理器，submit的任务的异常被Future.get封装在ExecutionException中，重新抛出。
+    JVM关闭
+        关闭触发：
+            正常：
+                所有非守护线程结束
+                调用System.exit
+                平台发送SIGINT信号或键入Ctrl+C
+            其他：
+                Runtime.halt
+                发送SIGKILL
+        关闭钩子  
+            正常关闭中，JVM首先调用所有已注册的Shutdown Hook，JVM并不保证其调用顺序，并发执行，必须同步，并小心死锁，且尽量尽快退出
+            Shutdown Hook：通过Runtime.addShutdownHook注册但尚未开始的线程
+                实现服务或应用程序的清理工作，如删除临时文件，清除无法由操作系统自动清除的资源
+            //注册一个关闭钩子来停止日志服务
+            public void run(){
+                Runtime.getRuntime().addShutdownHook(new Thread(){public void run(){
+                    try{ LogService.this.stop(); }catch(InterruptedException ignored){}
+                }});
+            }
+            在关闭日志服务时，可能导致其他需要日志服务的关闭钩子产生问题，故关闭钩子不应该依赖那些可能被应用程序或被其他钩子关闭的服务。
+                或者只使用单个钩子关闭所有服务，确保不会发生竞态条件。
+        守护线程
+            JVM停止时，所有守护线程都将被抛弃，既不执行finally也不执行回卷栈，而直接退出。
+****************
+* 线程池的使用 *
+****************
         
+    线程饥饿死锁
+        当线程池不够大，或是单线程池时，其中的任务A等待一个尚未开始的任务B的结果，B又因为得不到线程资源无法开始，造成饥饿死锁
+        这样的死锁可能十分隐蔽，如数据库连接只有10个，当超过10个任务等待另一个的结果时。
+    时间较长的任务
+        任务阻塞时间过长，导致线程池响应性变差。
+        不要使用无限制的等待，而使用限时的阻塞方法。
+        若线程池充满被阻塞的任务，可能说明线程池规模过小
+    线程池大小
+        计算密集型任务N_cup+1
+        I/O密集型任务 N_thread=N_cup*(1+T_wait/T_compute)
+    配置ThreadPoolExecutor
+        ThreadPoolExecutor(
+            int corePoolSize,       //基本大小
+            int maximumPoolSize,    //最大大小    
+            long keepAliveTime,     //最大空闲时间，超出则回收
+            TimeUnit unit, 
+            BlockingQueue<Runnable> workQueue, 
+            ThreadFactory threadFactory, 
+            RejectedExecutionHandler handler) 
+            没有任务执行时，线程数量为基本大小，只有工作队列满后才创建新的线程。
+            空闲时间超过keepAliveTime时，线程被标记为可回收，当前线程数量超过corePoolSize时，此线程被终止
+        饱和策略
+            当有界队列被填满后，新任务无法到队列中排队。饱和策略开始发挥作用：
+                AbortPolicy：抛出未检查额RejectedExecutionException
+                DiscardPolicy：悄悄抛弃该任务
+                DiscardOldestPolicy：抛弃队首的任务，不应与优先级队列一起使用（抛弃优先级最高的）
+                CallerRunsPolicy：调用者运行，在调用execute的线程中执行该任务。
+                    由于执行任务需要一定时间，故主线程至少在此期间不会提交新任务，从而使得工作者线程有时间处理正在执行的任务。
+                    这期间，主线程不会调用accept，因此到达的新请求被保存在TCP队列中，而非应用程序队列。若持续过载，TCP队列满后，
+                    同样开始抛弃请求。这样实现了一种平缓的性能降低。
+                    ThreadPoolExecutor exec = new ThreadPoolExecutor(N_threads,N_threads,0L,TimeUnit.MILLISECONDS,
+                        new LinkedBlockingQueue<Runnable>(CAPACITY));
+                    exec.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+            使用信号量来控制任务提交速度
+                @ThreadSafe
+                public class BoundedExecutor{
+                    private ExecutorService exec;
+                    private final Semaphore semaphore;
+                    public BoundedExecutor(ExecutorService exec, int bound){ this.exec=exec; this.semaphore=new Semaphore(bound); }
+                    public void submitTask(final Runnable command) throws InterruptedException{
+                        semaphore.acquire();
+                        try{
+                            exec.execute(new Runnable(){public void run(){try{command.run()}finally{semaphore.relase();}}});
+                        }catch (RejectedExecutionException e){semaphore.relase();}
+                    }
+        线程工厂
+            接口
+                public interface ThreadFactory{ Thread newThread(Runnable r);}
+            定制Thread基类
+                public class MythreadFactory implements ThreadFactory{
+                    private fianl String poolName;
+                    public MyThreadFactory(String name){ this.poolName = name;}
+                    public Thread newThread(Runnable runnable){ return new MyAppThread(runnable, poolName);}
+                }
+                public class MyAppThread extends Thread{
+                    public static final String DEFAULT_NAME="MyAppThread";
+                    private static volatile boolean debugLifecycle = false;
+                    private static final AtomicInteger created = new AtomicInteger();
+                    private static final AtomicInteger alive = new AtomicInteger();
+                    private static final Logger log = Logger.getAnnonymousLogger();
+                    public MyAppThread(Runnable r){this(r,DEFAULT_NAME);}
+                    public MyAppThread(Runnable r, String name){
+                        super(r, name+" "+ created.incrementAndGet());
+                        setUncaughtExceptionHandler( new Thread.UncaughtExceptionHandler(){ 
+                            public void uncaughtException(Thread t, Throwable e){ log.log(Level.SEVERE, "UNCAUGHT in Thread "+t.getName(),e); }
+                        });
+                    }
+                    public void run(){
+                        boolean debug = debugLifecycle;
+                        if(debug) log.log(Level.FINE, "Created "+getName());
+                        try{ alive.incrementAndGet(); super.run(); }
+                        finally{ alive.decrementAndGet(); if(debug) log.log(Level.FINE, "Exiting "+getName());}
+                    }
+                    public static void setDebug(boolean b){debugLifecycle=b;}
+                }
+        构造后再定制
+            使用Executors的工厂方法（newSingleThreadExecutor除外）创建的Executor可以转换为ThreadPoolExecutor再进行设置
+                ExecutorService exec = Executors.newCacheThreadPool();
+                if( exec instanceof ThreadPoolExecutor) ((ThreadPoolExecutor) exec).setCorePoolSize(10);
+                else throw new AssertionError("Oops, assumption");
+            Executors.unconfigurableExecutorService() newSingleThreadExecutor使用这种工厂方法返回不能配置的ExecutorService
+                如果不希望执行策略被修改可以使用此工厂方法
+    拓展ThreadPoolExecutor
+        可改写方法：beforeExecute、afterExecute、terminated
+        run正常返回或异常，afterExecute都会执行，若任务完成后带有Error则不会调用afterExecute
+        若beforeExecute抛出RuntimeException，则任务不会执行afterExecute也不会执行
+        线程池完成关闭操作后调用terminated，所有任务完成并且所有工作者线程关闭后，用以释放Executor在生命周期内分配的各种资源，
+            发送通知、记录日志、手机finalize统计信息等
+        
+********************************
+********************************
+**     活跃性、性能与测试     **
+********************************
+********************************
+ 
+****************                        
+*避免活跃性危险*
+****************
+    死锁
+        锁的顺序
+            所有线程以固定顺序获得锁，程序就不会出现死锁问题
+            动态的锁顺序
+                transferMoney(Account from,Account to, Amount amount);
+                先锁定from 后锁定to，
+                当 transferMoney(A,B,20);和 transferMoney(B,A,20);并发出现时，就会发生死锁
+        协作对象间发生死锁
+            持有锁时调用某个外部方法
+            class A{ public synchronized void fun(B b){ xxx(); b.fun(); } }
+            class B{ public synchronized void fun(A a){ aaa(); a.fun(); } } 
+        开放调用
+            访问某个方法时不需要持有锁--open call
+            在一些情况下xxx与aaa的操作并不要求是原子的
+            class A{ public void funx(B b){ synchronized(this){xxx();} b.fun(); } }
+            class B{ public void funa(A a){ synchronized(this){aaa();} a.fun(); } } 
+        资源死锁
+            线程饥饿死锁、有界资源池
+    死锁诊断与避免
+        定时的锁
+            显式使用Lock类的定时tryLock来代替内置锁机制。
+        线程转储信息分析死锁
+            unix平台：向JVM发送SIGQUIT（kill -3）或Ctrl+\
+            windows：ctrl+Break
+            java5不支持显式Lock类的相关转储信息，java6支持，但精确度比内置锁低。
+                内置锁与它所在的线程栈帧是相关的，显式Lock只与获得它的线程相关联
+    其他活跃性问题
+        饥饿
+            线程优先级使用不当、持有锁时执行无限循环或无限等待资源
+            ThreadAPI中定义了10个优先级，但平台可能没有那么多数量的优先级，多个优先级可能衣舍到同一个平台上的优先级，
+                当调高某个线程优先级时，可能起不到任何作用，或者起到作用而导致其他线程的饥饿。
+                改变线程优先级的行为与平台相关--尽量不要改变优先级
+        响应性
+            cpu密集型的后台任务可能与GUI线程竞争cpu时钟周期，使前台响应变差。若其他线程的工作都是后台任务，那么应降低其优先级，以提高程序响应性
+        活锁
+            通常在处理事务消息的应用中，处理某个消息失败，回滚，并将其重新添加到队列开头，反复调用，反复错误回滚。
+                过度的错误恢复代码，
+            当多个协作线程都对彼此进行响应而修改自身状态，并使得自身无法进行下去时，即发生活锁
+                两个礼貌的人在一条路上碰到，都给彼此让路，导致又在另一条路碰到，反复如此使双方都无法到达目的地
+****************                        
+*性能与可伸缩性*
+****************            
+    性能
+        使用多线程目的是提升整体性能，但会引入额外的开销
+            线程间协调（加锁、触发信号、内存同步）、增加上下文切换、线程创建与销毁、线程调度
+        可伸缩性
+            增加计算资源（cpu、内存、存储容量、I/O带宽）时，程序吞吐量或处理能力相应增加
+    Amdahl定律
+        Speedup <= 1/(F+(1-F)/N) 
+        N个处理器加速比，F为串行执行部分
+    线程引入开销
+        上下文切换
+            可运行线程数量>cpu数量时，操作系统会将正在执行的某个线程调度出，从而使得其他没有cpu资源的线程能够得到CPU使用。
+            越多阻塞越多上下文切换
+            若内核占有率较高（多于10%），通常表示调度活动发生的频繁
+        内存同步
+            volatile内存栅栏
+            无竞争同步开销不为0，但对程序整体影响微乎其微，
+        阻塞
+            JVM实现阻塞的方式：自旋等待（持续不断尝试获取，直到成功）、通过操作系统挂起被阻塞进程。
+    减少锁竞争
+            减少锁持有时间
+            降低锁请求频率
+            使用带有允许更高并发性的协调机制的独占锁
+        缩小锁的范围 以减少持有时间
+            将一个同步代码块分解为多个同步块：仅当可以将“大量计算”或阻塞操作移出同步块时，才应该考虑。
+            public class A{public synchronized void fun(){ xxx(); yyy(); zzz();} }  //xxx,yyy,zzz是否有大量计算或I/O阻塞
+            public class A{public void fun(){ xxx(); synchronized(this){yyy();} zzz();} }
+        减小锁粒度 以减少锁请求频率
+            使用不同的锁来保护相互独立的状态变量
+            public class A{ 
+                private final B b; 
+                private final C c; 
+                public synchronized void addB(String x){b.add(x);}
+                public synchronized void addC(String x){c.add(x);}
+            } //状态b与c相互独立
+            改为
+            public class A{ 
+                private final B b; 
+                private final C c; 
+                public void addB(String x){ synchronized(b){b.add(x);} }
+                public void addC(String x){ synchronized(c){c.add(x);} }
+            } 
+        锁分段 提高并发
+            将独立对象分组，每组使用一个锁对象。
+            ConcurrentHashMap的实现：使用16个锁的数组，每个锁保护所有散列桶的1/16，第N个桶由第mod(N,16)个锁保护。
+        避免热点域 Hot Field
+            将反复计算的结果缓存，往往引入热点域，而限制可伸缩性
+            HashMap的size方法的实现方式：
+                每次调用锁住整个对象，统计元素数
+                维护一个计数器，put与remove时更新之（为了避免枚举每个元素，ConcurrentHashMap为每个段维护一个独立计数
+        替代独占锁的方法
+            并发容器、不可变对象、
+            读-写锁：读共享，写独占
+            原子变量：提供了一种降低更新热点域开销的方式、静态计数器、序列发生器
+        监测CPU
+            unix系统的vmstat与mpstat命令
+
+                
+
+
