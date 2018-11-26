@@ -8,7 +8,8 @@ git checkout -- xx.file 丢弃对工作区的修改
 git reset HEAD XXX.file 可以撤销对暂存区的修改，使返回工作区
 
 git status  工作区与暂存区的状态
-git diff xxx.file
+git diff xxx.file 加参数即默认比较工作区与暂存区
+git diff dev 当前分支与dev分支比较
 git reset --hard HEAD^ 回到上个版本添加“^”来回到更上个版本
 git reflog 记录每次命令
 
