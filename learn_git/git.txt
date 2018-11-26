@@ -1,0 +1,32 @@
+
+git init 初始化一个仓库
+工作区-暂存区stage-仓库.git
+git add xxx.file        将工作区的修改更新到暂存区
+git rm  xxx.file        类似add，将删除更新到暂存区
+git commit -m "info"    将暂存区的所有内容提交给当前分支
+git checkout -- xx.file 丢弃对工作区的修改
+git reset HEAD XXX.file 可以撤销对暂存区的修改，使返回工作区
+
+git status  工作区与暂存区的状态
+git diff xxx.file
+git reset --hard HEAD^ 回到上个版本添加“^”来回到更上个版本
+git reflog 记录每次命令
+
+
+
+git remote add origin git@github.com:xxxx/xxxx.git
+git push origin master
+ 
+git clone git@github.com:xxxxx/xxx.git
+
+git branch dev      创建dev分支
+git checkout dev    切换到
+git merge dev       将dev的内容合并到当前
+git branch -d dev   删除分支
+
+git tag v0.9 f52c633 给f5这条记录打一个标记
+git tag v0.1        给最新的commit打标签
+git tag -d v0.9     删除某个标签
+git push origin v1.0
+git push origin --tags 一次性推送全部尚未推送到远程的本地标签
+git push origin :refs/tags/v0.9 删除远程的标签
