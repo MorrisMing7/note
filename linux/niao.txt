@@ -1,0 +1,113 @@
+vim
+    进入命令模式
+        : / ?
+    光标移动
+        左下上右hjkl
+            20j向下移动20行
+            n<enter>
+        跳转到本行第n个字符
+            n<space>
+        移动到行首
+            0 或 [home]键
+        移动到行尾
+            [end] 或 $
+        翻页
+            Ctrl+f 等价 [PageDown]  ; Ctrl+d 向下半页
+            Ctrl+b 等价 [PageUp]    ; Ctrl+u 向上半页
+        屏幕位置
+            最上方  H
+            中央    M
+            最下方  L
+        文件位置
+            nG 文件第n行
+            gg 文件第一行
+        搜索
+            /word 向光标以后寻找word
+            ?word 向光标之前寻找word
+            n N 下一个 上一个
+    进入编辑模式
+        i a o r
+            o下一行插入新行 O上一行插入新行
+            r替代一个字符   R持续替代字符相当于word里的insert键
+    更动
+        替换
+            :n1,n2s/word1/word2/g[c] 将n1到n2行间的word1替换为word2
+                n2可以是$,表示最后一行
+                最后可选的c表示让用户确认是否替代
+        光标所在处为当前闪烁字符的左侧
+        删除
+            x   相当于[delete]
+            X   相当于[backspace]
+            nx  向后删除n个字符
+            dd  删除整行
+            ndd 删除n行
+            d1  G删除光标所在至第一行
+            dG  删除光标所在至最后
+            d0  行内删除到第一个字符
+            d$  行内删除到最后一个字符
+            c20j
+            c21l 用c删除后就进入插入模式了
+        复制
+            yy 当前行
+            nyy 当前行向下n行（包括当前行）
+            y1G 当前一行至第一行    
+            yG  当前一行至最后一行
+            y0  行内复制到行首
+            y$  行内复制
+        可视模式
+            v 行内选择
+            V 行选择
+            Ctrl+v 长方形选择
+            y 选中部分复制
+            d         删除   
+            p 可以方形复制
+        粘贴
+            p下一行     行内粘贴时粘贴到当前字符右侧
+            P到上一行   行内粘贴时粘贴到光标处
+        撤销与重做
+            u 撤销
+            Ctrl+r 重做    
+            . 重复上一个动作
+    保存退出
+        :w 写入
+        :w! 强行写入
+        :q 
+        :q! 离开并不存储
+        :wq 存储并离开
+        ZZ  自动离开 更动则存储 
+        :w [filename] 另存为
+        :r [filename] 将此文件中的内容加到光标所在行的下一行
+        :n1,n2 w [filename] 将n1到n2的内容保存为一个文件
+        :! command 暂时离开vi 执行command 显示结果
+        :set [nu|nonu]  设置或取消行号
+    多窗口
+        :sp [filename]
+        Ctrl+w, j/k 切换窗口
+        Ctrl+w, q 退出
+    自动补全
+        Ctrl+x,Ctrl+n 以正在编辑的文字为关键字补齐
+        Ctrl+x,Ctrl+o 以文件拓展名语法补齐
+        Ctrl+x,Ctrl+f 以当前目录下的文件名为补齐目标
+转换编码
+    iconv -f big5 -t utf8 filename [-o newfile]
+    iconv --list 列出支持的语系
+回车符转换
+    dos2unix 
+    unix2dos [-kn] file [newfile]
+        -n保留旧文件转换内容到新文件
+        -k保留文件原本的mtime时间
+
+
+
+
+
+
+        
+
+
+    
+    
+
+
+
+
