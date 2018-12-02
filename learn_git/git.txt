@@ -13,7 +13,7 @@ git diff dev 当前分支与dev分支比较
 git reset --hard HEAD^ 回到上个版本添加“^”来回到更上个版本
 git reflog 记录每次命令
 
-
+git config --global core.autocrlf input   Linux平台忽略换行符差异https://help.github.com/articles/dealing-with-line-endings/
 
 git remote add origin git@github.com:xxxx/xxxx.git
 git push origin master
