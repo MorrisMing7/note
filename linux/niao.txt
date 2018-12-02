@@ -1,52 +1,55 @@
 常用命令
-    cd x
-        ~家
-        -上一个工作目录
-        .为当前目录
-        ..为上层目录
-    pwd [-P真实路径即非链接表示的路径]输出当前目录
-    ls -al 通常alias为 ll
-    mkdir [-p建立上层] dir3
-    mkdir -m 777 dir4
-    rm xxx 
-    rmdir [-p删除也为空的上层] 删除空文件夹
-    mv fromdir todir
-    chmod a+x filename
-        a为all 还可以是u=user，g=group，o=other
-        +为增加权限还可以-
-        x为执行还可以是r=read，w=write
-    chmod [-R] 777 file
-        r=4,w=2,x=1
-        -R 为递归
-    cat一次显示 more逐行显示 less上下翻页（/搜索nN上下一个，gG头尾），head与tail -n number filename
-    touch建立空文件，或修改文件时间
-    file filename 文件信息
-    find / -name passwd
-    find / -name "*passwd"
-    df -h 磁盘使用情况
-       -i iNode使用情况
-    du -sh 目录的占容量
-        du -s * | sort -nr | head 
-    lsblk 磁盘列表
-    blkid 磁盘uuid
-    parted /dev/sdb1 print 列出磁盘的分区表类型与分区信息
-    gdisk fdisk 分区工具 MBR用fdisk GPT用gdisk
-    mkfs 建立文件系统 即格式化
-        mkfs.xfs mkfs.ext4...
-    mount [-t 文件系统种类] 装置名 挂载点
-        -o iocharset=utf8 编码类型
-        -t 几乎不需要指明类型，已经可以自己判断     
-        mount -a 的配置文件/etc/fstab    
-    ln 实体链接
-        ln fileA fileB 文件A必须存在 文件B必须不存在 从此AB是一个文件的不同入口，修改同步，名字不同，删除一个另一个仍会存在
-        ll fileA fileB 会显示两个相同的iNode
-        ln -s fileA fileASymolickLink A若是被删除，则符号链接无法打开，A也可以是目录
-        新建目录的link数为2，新建目录时，该目录的上层目录的link+1
-            /tmp/test    link到本身
-            /tmp/test/.  link到本身
-            /tmp/tets/.. link到tmp
-    tar -xzvf xxx.tar.gz
-        -czvf xxx.tar.gz xxxfile
+    文件夹
+        cd x
+            ~家
+            -上一个工作目录
+            .为当前目录
+            ..为上层目录
+        pwd [-P真实路径即非链接表示的路径]输出当前目录
+        ls -al 通常alias为 ll
+        mkdir [-p建立上层] dir3
+        mkdir -m 777 dir4
+        rm xxx 
+        rmdir [-p删除也为空的上层] 删除空文件夹
+        mv fromdir todir
+        chmod a+x filename
+            a为all 还可以是u=user，g=group，o=other
+            +为增加权限还可以-
+            x为执行还可以是r=read，w=write
+        chmod [-R] 777 file
+            r=4,w=2,x=1
+            -R 为递归  
+        ln 实体链接
+            ln fileA fileB 文件A必须存在 文件B必须不存在 从此AB是一个文件的不同入口，修改同步，名字不同，删除一个另一个仍会存在
+            ll fileA fileB 会显示两个相同的iNode
+            ln -s fileA fileASymolickLink A若是被删除，则符号链接无法打开，A也可以是目录
+            新建目录的link数为2，新建目录时，该目录的上层目录的link+1
+                /tmp/test    link到本身
+                /tmp/test/.  link到本身
+                /tmp/tets/.. link到tmp
+        du -sh 目录的占容量
+            du -s * | sort -nr | head 
+    文件    
+        cat一次显示 more逐行显示 less上下翻页（/搜索nN上下一个，gG头尾），head与tail -n number filename
+        touch建立空文件，或修改文件时间
+        file filename 文件信息
+        find / -name passwd
+        find / -name "*passwd"
+        tar -xzvf xxx.tar.gz
+            -czvf xxx.tar.gz xxxfile
+    磁盘 分区 挂载
+        df -h 磁盘使用情况
+           -i iNode使用情况
+        lsblk 磁盘列表
+        blkid 磁盘uuid
+        parted /dev/sdb1 print 列出磁盘的分区表类型与分区信息
+        gdisk fdisk 分区工具 MBR用fdisk GPT用gdisk
+        mkfs 建立文件系统 即格式化
+            mkfs.xfs mkfs.ext4...
+        mount [-t 文件系统种类] 装置名 挂载点
+            -o iocharset=utf8 编码类型
+            -t 几乎不需要指明类型，已经可以自己判断     
+            mount -a 的配置文件/etc/fstab  
     
 vim
     进入命令模式
@@ -157,8 +160,15 @@ vim
         =直接赋值，左右不可由空格，如var1=xxx        
         取用变量使用$符号，如echo var1; 输出xxx
         双引号内的东西有其原有特性，如var2="var1 is $var1" ;echo $var2;其结果是var is xxx
-        转义字符\为转义字符，如var3=var2\ haha3;echo var3; 其结果var2 haha3
-	
+            若是单引号，则表示为普通字符串 var4='var1 is not $var1';echo $var4;结果为var1 is not $var1
+        跳脱字符\，如var3=var2\ haha3;echo var3; 其结果var2 haha3。可以用作换行
+        若变量设置时需要一些命令的结果可以用`command`或者$(command)如var5="print working dir:`pwd`";结果为print working dir: /home/morris
+        拓展变量内容 PATH=${PATH}:/home/bin或者PATH="$PATH":home/bin
+        unset var5取消var5的设置
+	命令别名
+	    type ls 查询ls是否內建 找出执行档
+	    alias ll='ls -alF'  （默认的）
+	    
 
 
 
