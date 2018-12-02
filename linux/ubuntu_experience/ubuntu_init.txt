@@ -1,0 +1,167 @@
+Ubuntu的使用
+    主目录文件夹英文
+		export LANG=en-US
+		xdg-user-dirs-gtk-update
+		弹出窗口同意更新
+		export LANG=zh_CH #修改回中文
+		关闭终端,并注销或重启.下次进入系统,系统会提示是否把转化好的目录改回中文.选择不许要并且勾上不再提示,并取消修改.主目录的中文转英文就完成了
+	搜狗输入法
+	    sudo add-apt-repository ppa:fcitx-team/nightly && sudo apt-get update
+        sudo apt-get install fcitx && sudo apt-get install fcitx-config-gtk
+        sudo apt-get -f install 
+        sudo apt-get install fcitx-table-all && sudo apt-get install im-switch
+        sudo dpkg -i sougou......deb
+    字符界面中文乱码
+        sudo apt-get install zhcon
+    更新源
+		sudo gedit /etc/apt/source.list
+		替换为以下内容
+-----------------------------------------------------------
+# deb cdrom:[Ubuntu 16.04 LTS _Xenial Xerus_ - Release amd64 (20160420.1)]/ xenial main restricted
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial main restricted
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial-updates main restricted
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial universe
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial-updates universe
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial-updates multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial-backports main restricted universe multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial-security main restricted
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial-security universe
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ xenial-security multiverse
+-----------------------------------------------------------
+		sudo apt-get update && sudo apt-get upgrade
+    均衡器
+		sudo add-apt-repository ppa:nilarimogard/webupd8 ;sudo apt-get update ;sudo apt-get install pulseaudio-equalizer	
+	安装谷歌浏览器
+		http://www.linuxidc.com/Linux/2016-05/131096.htm
+		sudo wget http://www.linuxidc.com/files/repo/google-chrome.list -P /etc/apt/sources.list.d/
+		#如果返回“地址解析错误”等信息，可以百度搜索其他提供 Chrome 下载的源，用其地址替换掉命令中的地址。
+		wget -q -O - https://dl.google.com/linux/linux_signing_key.pub  | sudo apt-key add -
+		#如果顺利的话，命令将返回“OK”
+		sudo apt-get update;
+		sudo apt-get install google-chrome-stable 
+		/usr/bin/google-chrome-stable
+		#将会启动谷歌 Chrome 浏览器，它的图标将会出现在屏幕左侧的 Launcher 上，在图标上右键——“锁定到启动器”，以后就可以简单地单击启动了。
+	java
+		cd ~
+		sudo add-apt-repository ppa:webupd8team/java && sudo apt-get update; sudo apt-get install oracle-java8-installer
+		java -version测试是否成功
+		################################
+		列出了本机所安装的所有Java运行时环境JRE
+		sudo update-alternatives --config java
+		#################################
+		sudo nano /etc/environment
+		复制上面打印的结果中类似以下的路径 /usr/lib/jvm/java-8-oracle添加到文件中
+		#####################################
+		source /etc/environment
+		使之生效
+		###########################
+		测试
+		echo $JAVA_HOME
+	安装pycharm
+		先装java
+		####################
+		cd pycharm-community-2017.2.3/bin
+		 ./pycharm.sh
+	安装tomcat
+	    下载Core：https://tomcat.apache.org/download-80.cgi
+	    cd ~ && tar -xzvf /home/morris/Downloads/apache-tomcat-8.5.35.tar.gz
+	    vi apache-tomcat-8.5.35/bin/start.sh
+	    在文件最后加上
+-----------------------------------------------------------
+JAVA_HOME=/usr/bin/java
+PATH=$JAVA_HOME/bin:$PATH
+CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+TOMCAT_HOME=~/apache-tomcat-8.5.35
+-----------------------------------------------------------
+        ~/apache-tomcat-8.5.35/bin/start.sh
+        ~/apache-tomcat-8.5.35/bin/shutdown.sh
+    安装eclipse
+        http://ftp.yz.yamagata-u.ac.jp/pub/eclipse/oomph/epp/2018-09/Ra/eclipse-inst-linux64.tar.gz
+        cd~ && mkdir eclipse && cd eclipse && tar -xzf eclipse-inst-linux64.tar.gz 
+        mv eclipse-installer/* . && rmdir eclipse-installer
+        ./eclipse-inst
+        vi eclipse.desktop
+-----------------------------
+[Desktop Entry]
+Type=Application
+Name=Eclipse
+Exec=/home/morris/eclipse/jee-2018-09/eclipse/eclipse
+Icon=/home/morris/eclipse/jee-2018-09/eclipse/icon.xpm
+Categories=Development;
+---------------------------------
+    安装maven
+        方式1：sudo apt-get install maven
+        方式2：
+            https://maven.apache.org/download.cgi
+            下载apache-maven-3.x.x-bin.tar.gz
+            cd ~ && tar -xzf Downloads/apache-maven...tar.gz
+            sudo vi /etc/profile        #在此配置的环境变量对所有用户有效
+------------------------------------------------------
+export M2_HOME=/home/morris/apache-maven-3.6.0
+#export MAVEN_OPTS="-Xmx1024m"  #避免内存溢出错误（可选）
+export PATH=${M2_HOME}/bin:${PATH}
+--------------------------------------------------------
+            注销或者source /etc/profile 使生效
+        检验：mvn -v
+        配置：cd /usr/share/maven && sudo vi ./conf/settings.xml
+            本地仓库位置
+              <!-- localRepository
+               | The path to the local repository maven will use to store artifacts.
+               | Default: ${user.home}/.m2/repository
+              <localRepository>/path/to/local/repo</localRepository>
+              -->
+            阿里云镜像
+             <mirror>  
+                 <id>alimaven</id>  
+                 <name>aliyun maven</name>  
+                 <url>http://maven.aliyun.com/nexus/content/groups/public/</url>  
+                 <mirrorOf>central</mirrorOf>          
+             </mirror>        
+    安装MySQL
+        sudo apt-get install mysql-server
+        apt-get isntall mysql-client
+        sudo apt-get install libmysqlclient-dev
+　　      安装过程中会提示设置密码什么的，注意设置了不要忘了，安装完成之后可以使用如下命令来检查是否安装成功：
+        sudo netstat -tap | grep mysql
+        mysql -u root -p #执行,提示输入密码
+    
+######################################################
+    磁盘使用情况分析器
+		baobab
+    删除软件
+		方法一、如果你知道要删除软件的具体名称，可以使用               
+		sudo apt-get remove --purge 软件名称  
+		sudo apt-get autoremove --purge 软件名称 
+		方法二、如果不知道要删除软件的具体名称，可以使用
+		dpkg --get-selections | grep ‘软件相关名称’
+		sudo apt-get purge 一个带core的package，如果没有带core的package，则是情况而定。
+    清理残留数据
+		dpkg -l |grep ^rc|awk '{print $2}' |sudo xargs dpkg -P 
+    安装软件
+		sudo dpkg -i ×××.deb
+	有依赖×××××则
+		sudo apt-get -f -y install
+    移动硬盘不能挂载
+		sudo fdisk -l #展示现有磁盘
+		sudo ntfsfix /dev/sdb5
+挂载win共享目录 ######################
+    PS：此方法可用于局域网一台ubuntu的主机和win7的主机之间共享文件夹。也可用于ubuntu下虚拟机中系统与另一win7主机共享文件夹。非常方便实用！
+    1.在win7下设置共享目录：
+    在d盘新建一个文件夹share，右键选择设置共享，“选择与其共享的用户”，选择everyone。建好后：\\ZQ-PC\share就是其位置，ZQ-PC是我的机器名。
+    2.在unbutu下挂载刚才建立的共享文件夹
+    1）在unbutu的/mnt下建立win share文件夹：mkdir /mnt/winshare;
+    2）在win7的小黑框中运行ipconfig，找到ipv4本地地址：xx.xx.xx.xx
+    3）在ubuntu下挂载：sudo mount -t cifs -o username=zq,password=XXXX  //xx.xx.xx.xx(上面的地址)/share（刚才建立的共享文件夹名）  /mnt/winshare;
+    4）cd /mnt/winshare 即可看到share中的内容
+
+
+
+
+
+
+
+
+
+
+

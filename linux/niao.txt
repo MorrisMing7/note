@@ -1,3 +1,53 @@
+常用命令
+    cd x
+        ~家
+        -上一个工作目录
+        .为当前目录
+        ..为上层目录
+    pwd [-P真实路径即非链接表示的路径]输出当前目录
+    ls -al 通常alias为 ll
+    mkdir [-p建立上层] dir3
+    mkdir -m 777 dir4
+    rm xxx 
+    rmdir [-p删除也为空的上层] 删除空文件夹
+    mv fromdir todir
+    chmod a+x filename
+        a为all 还可以是u=user，g=group，o=other
+        +为增加权限还可以-
+        x为执行还可以是r=read，w=write
+    chmod [-R] 777 file
+        r=4,w=2,x=1
+        -R 为递归
+    cat一次显示 more逐行显示 less上下翻页（/搜索nN上下一个，gG头尾），head与tail -n number filename
+    touch建立空文件，或修改文件时间
+    file filename 文件信息
+    find / -name passwd
+    find / -name "*passwd"
+    df -h 磁盘使用情况
+       -i iNode使用情况
+    du -sh 目录的占容量
+        du -s * | sort -nr | head 
+    lsblk 磁盘列表
+    blkid 磁盘uuid
+    parted /dev/sdb1 print 列出磁盘的分区表类型与分区信息
+    gdisk fdisk 分区工具 MBR用fdisk GPT用gdisk
+    mkfs 建立文件系统 即格式化
+        mkfs.xfs mkfs.ext4...
+    mount [-t 文件系统种类] 装置名 挂载点
+        -o iocharset=utf8 编码类型
+        -t 几乎不需要指明类型，已经可以自己判断     
+        mount -a 的配置文件/etc/fstab    
+    ln 实体链接
+        ln fileA fileB 文件A必须存在 文件B必须不存在 从此AB是一个文件的不同入口，修改同步，名字不同，删除一个另一个仍会存在
+        ll fileA fileB 会显示两个相同的iNode
+        ln -s fileA fileASymolickLink A若是被删除，则符号链接无法打开，A也可以是目录
+        新建目录的link数为2，新建目录时，该目录的上层目录的link+1
+            /tmp/test    link到本身
+            /tmp/test/.  link到本身
+            /tmp/tets/.. link到tmp
+    tar -xzvf xxx.tar.gz
+        -czvf xxx.tar.gz xxxfile
+    
 vim
     进入命令模式
         : / ?
@@ -7,9 +57,9 @@ vim
             n<enter>
         跳转到本行第n个字符
             n<space>
-        移动到行首
+        行内首
             0 或 [home]键
-        移动到行尾
+            尾
             [end] 或 $
         翻页
             Ctrl+f 等价 [PageDown]  ; Ctrl+d 向下半页
@@ -21,6 +71,7 @@ vim
         文件位置
             nG 文件第n行
             gg 文件第一行
+            G 文件尾
         搜索
             /word 向光标以后寻找word
             ?word 向光标之前寻找word
@@ -88,15 +139,26 @@ vim
         Ctrl+x,Ctrl+n 以正在编辑的文字为关键字补齐
         Ctrl+x,Ctrl+o 以文件拓展名语法补齐
         Ctrl+x,Ctrl+f 以当前目录下的文件名为补齐目标
-转换编码
-    iconv -f big5 -t utf8 filename [-o newfile]
-    iconv --list 列出支持的语系
-回车符转换
-    dos2unix 
-    unix2dos [-kn] file [newfile]
-        -n保留旧文件转换内容到新文件
-        -k保留文件原本的mtime时间
-
+    转换编码
+        file fileName 查看文件编码
+        iconv -f big5 -t utf8 filename [-o newfile]
+        iconv --list 列出支持的语系
+    回车符转换
+        dos2unix 
+        unix2dos [-kn] file [newfile]
+            -n保留旧文件转换内容到新文件
+            -k保留文件原本的mtime时间
+开始bash
+    编辑
+        Ctrl+ae 移动光标到行首尾
+        Ctrl+uk 删除光标前后内容
+    变量
+        由字母与数字组成，开头不可是数字
+        =直接赋值，左右不可由空格，如var1=xxx        
+        取用变量使用$符号，如echo var1; 输出xxx
+        双引号内的东西有其原有特性，如var2="var1 is $var1" ;echo $var2;其结果是var is xxx
+        转义字符\为转义字符，如var3=var2\ haha3;echo var3; 其结果var2 haha3
+	
 
 
 
