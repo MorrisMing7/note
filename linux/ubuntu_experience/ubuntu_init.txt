@@ -126,6 +126,9 @@ export PATH=${M2_HOME}/bin:${PATH}
         sudo netstat -tap | grep mysql
         mysql -u root -p #执行,提示输入密码
     
+	wps-office
+	    sudo apt-get install wps-office
+	    sudo unzip symbol_fonts.zip -d /usr/share/fonts/wps-office 公式始终乱码
 ######################################################
     磁盘使用情况分析器
 		baobab
