@@ -156,18 +156,144 @@ vim
         Ctrl+ae 移动光标到行首尾
         Ctrl+uk 删除光标前后内容
     变量
-        由字母与数字组成，开头不可是数字
-        =直接赋值，左右不可由空格，如var1=xxx        
+        由字母与数字与下划线组成，开头不可是数字
+        =直接赋值，左右不可由空格，如var1=xxx    
         取用变量使用$符号，如echo var1; 输出xxx
         双引号内的东西有其原有特性，如var2="var1 is $var1" ;echo $var2;其结果是var is xxx
             若是单引号，则表示为普通字符串 var4='var1 is not $var1';echo $var4;结果为var1 is not $var1
         跳脱字符\，如var3=var2\ haha3;echo var3; 其结果var2 haha3。可以用作换行
         若变量设置时需要一些命令的结果可以用`command`或者$(command)如var5="print working dir:`pwd`";结果为print working dir: /home/morris
         拓展变量内容 PATH=${PATH}:/home/bin或者PATH="$PATH":home/bin
-        unset var5取消var5的设置
+        unset var5取消var5的设置 set命令可以展示现有变量
+        $本身也是变量，表示shell的PID。echo $$输出15983
+        ?也是变量，表示上个指令的回传值，成功的指令为0
+        read 接受键盘输入的一行字符到一个变量中去
+        declare 宣告变量类型，没有参数时=set
+            -a 数组
+            -i 数字，整数，bash内的运算只能是整数1/2=0
+            -x 等同于export，将变量变为环境变量
+            -r 只读类型，不可更改且不能unset
+        数组 var[1]=aaa var[2]=bbb var[3]=ccc  echo ${var[1]}        
 	命令别名
 	    type ls 查询ls是否內建 找出执行档
 	    alias ll='ls -alF'  （默认的）
+	    aliad lm='ls -al | more'
+	    unalias lm
+	用户资源限制 ulimit
+	    -a 列出所有限制
+	    -SH 警告设定与限制设定 -u 最大process数量
+	    -f 最大文件容量        -d 程序可使用最大内存分段segment
+	    -l 用于锁定的内存量    -t 最大cpu时间单位秒
+	    -c 核心文件(当程序出错，系统可以将内存中的信息写成文件)的最大容量
+    编辑
+        删除
+            #,##从左向右删除 单个的表示只匹配最短
+            %,%%从右向左删除 两个的表示匹配最长
+                path=$PATH;  echo ${path#/*:} ; echo ${path##/*:};百分号则反向匹配
+                echo ${path%%:/usr*} 
+        替换
+            ${path//morris/Morris} 可以把Morris去掉用以删除，同样的可以用单个/表示只删除一个
+            
+        空判断与赋值
+            var=${str[:][+-=?]expr}
+            str  表示是否str没有定义
+            str: 表示是否str没有定义或定义为空字符串
+            +是则为str，否则为expr
+            -与+相反
+            =是则str赋值为expr，否则str不变，后在var=str
+            ?是则expr输出至stderr，否则var=str
+    命令历史 history
+	    history 10 最近10条
+	        -c 清楚当前shell中的history
+        history [-arw] xxxfile
+            -a 当前新增的加入到xxx中去 没有指定xxx则写入~/.bash_history
+            -r 读取xxx中的内容到history中
+            -w 当前history写入到文件
+        !xxx 向前搜索开头为xxx的命令并执行
+        !!   相当于按↑再回车
+    欢迎界面文字
+        /etc/issue
+        \d本地端时间的日期;     \l显示第几个终端机接口;  \m显示硬件的等级 (i386/i486/i586/i686...);
+        \n显示主机的网络名称;   \O显示 domain name;     \r操作系统的版本 (相当于 uname -r)
+        \t显示本地端时间的时间; \S操作系统的名称;        \v操作系统的版本
+    bash环境配置文件               
+        login shell 需要登录密码流程的
+            /etc/profile 系统整体设定
+                PATH:依据 UID 决定 PATH 变量要不要含有 sbin ;MAIL:依据账号设定好使用者的 mailbox到 /var/spool/mail/账号名; USER:根据用户的账号设定此一变量内容;HOSTNAME:依据主机的 hostname 指令决定此一变量内容; HISTSIZE:历史命令记录笔数。umask:包括 root 默认为 022 而一般用户为 002 等!
+            ~/.bash_login或~/.profile 用户设定
+        no-login shell bash中再bash没有需要密码 X window登入没有需要密码
+    终端环境stty
+        stty -a 
+        stty intr ^C 中断设置为Ctrl+C（默认就是这个）
+    特殊字符
+        []*?以及“[-]”表示编码序列内的字符以及“[^]”反选序列 表示通配
+        #注释
+        \转义
+        |管道
+        ;连续指令分割
+        ~用户家目录
+        $取变量
+        &工作控制，将指令变为背景下工作
+        !逻辑非
+        > >> < << 数据流重导向
+        '' $作为文本
+        ""保留$的功能
+        ``先执行指令
+        ()子shell的起始与结束
+        {}命令区块组合 
+    数据流  
+        1. 标准输入 (stdin) :代码为 0 ,使用 < 或 << ;
+        2. 标准输出 (stdout):代码为 1 ,使用 > 或 >> ;文件不存在则建立
+        3. 标准错误输出(stderr):代码为 2 ,使用 2> 或 2>>
+            垃圾黑洞 /dev/null 如xxcommand xxarg 2> /dev/null将错误信息丢弃
+        单个符号表示覆盖，多个表示累加
+	        例 ll /etc > ~/rootfilelist  
+	           find /home -name .bashrc > list_right 2> list_error 
+	            #正确与错误信息分别输入不同文件
+        写入同一个文件的特殊语法:可以使用 2>&1 也可以使用 &>
+	        常规写法...... > list 2> list
+	        特殊写法...... > list 2>&1
+	                       &> list
+	        写入同一个文件由于两股数据留交叉，会造成次序混乱
+        键盘输入创建文件
+	        cat > catfile 
+	            [输入内容，ctrl+D结束]
+	        cat > catfile <<"eof"
+	            [输入内容，以"eof"结束]
+    连续指令
+        不相干	sync; sync; shutdown -h now
+        正确则继续  cd ~ && cat .bashrc   
+        不成功则继续  ls abc.txt || touch abc.txt
+    管线
+	    cmd1 | cmd2
+	    管线命令仅会处理 standard output,对于 standard error output 会予以忽略
+	    管线命令必须要能够接受来自前一个指令的数据成为 standard input 继续处理才行
+    截取
+        cut 截取出行内我们想要的数据
+	        cut -d '分隔字符' -f '数字表示的段,逗号间隔'
+	        cut -c 12-20 以字符为单位列出第12到第20
+	            不太适合处理多空格相连的数据
+        grep 分析行信息，只取需要的行
+	        grep [-acinv] [--color=auto] '搜寻字符串' filename
+		    a 将binary文件以text方式搜寻
+		    c 计算次数  i 忽略大小写  n 输出行号  v 反向选择
+            last | grep 'morris' |cut -d ' ' -f 1 #最近登录的账户
+    排序
+        sort [-f..] [file or stdin]
+        -f :忽略大小写的差异,例如 A 与 a 视为编码相同;
+        -b :忽略最前面的空格符部分;
+        -M :以月份的名字来排序,例如 JAN, DEC 等等的排序方法;
+        -n :使用『纯数字』进行排序(默认是以文字型态来排序的);
+        -r :反向排序;
+        -u :就是 uniq ,相同的数据中,仅出现一行代表;
+        -t :分隔符,预设是用 [tab] 键来分隔;
+        -k :以那个区间 (field) 来进行排序的意思
+        uniq 去重 -i忽略大小写 -c 计数
+        wc 字数统计 -l 列出行数 -w 列出单词英数 -m 字符数
+    双向重导向
+        即分流出来
+        
+
 	    
 
 
