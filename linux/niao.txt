@@ -264,8 +264,8 @@ vim
         不相干	sync; sync; shutdown -h now
         正确则继续  cd ~ && cat .bashrc   
         不成功则继续  ls abc.txt || touch abc.txt
-    管线
-	    cmd1 | cmd2
+    管线  cmd1 | cmd2 
+        cmd1的stdout成为cmd2的stdin        
 	    管线命令仅会处理 standard output,对于 standard error output 会予以忽略
 	    管线命令必须要能够接受来自前一个指令的数据成为 standard input 继续处理才行
     截取
@@ -290,10 +290,32 @@ vim
         -k :以那个区间 (field) 来进行排序的意思
         uniq 去重 -i忽略大小写 -c 计数
         wc 字数统计 -l 列出行数 -w 列出单词英数 -m 字符数
-    双向重导向
-        即分流出来
-        
-
+    双向重导向                                 stdin -> tee -> stdout
+        即将输出导向到两处地方                            |  
+        例                                               V
+            last | tee last.list |cut -d " " -f 1      file
+    字符转换
+        tr -d '要删除的串' 
+           -s 取代掉重复字符
+        col -x 将tab转换为对等的字符
+        expand -t tab转成指定数额的空格
+        join -t '分割字符(默认tab)' -1 n1 firFileName -2 n2 secFileName
+            -1 -2 设置第1第2个文件的用以比对的字段序数
+            将两个文件的行中对应字段相同的链接成一行，对应字段需已排序
+        paste [-d] file1 file2
+            直接将两个文件的行连在一起 -d 分隔符默认为tab, 
+            file部分写为-，则表示来自stdin
+    管线中'-'可以表示stdin
+    为不支持管线的指令提供参数
+        很多指令其实并不支持管线命令,因此我们可以透过 xargs使该指令可以使用stdin
+        cut -d ':' -f 1 /etc/passwd | xargs -e'sync' -n 1 id
+    大文件分割
+        split [-bl] file Prefix
+            -b 按大小划分 -l 按行数划分 Prefix为前缀即划分后保存文件名的前缀
+            
+            
+            
+               
 	    
 
 

@@ -56,7 +56,8 @@
 
     线程封闭  
         仅在单线程中访问数据。
-        JDBC中的Connection对象不要求是线程安全的，线程从连接池(连接池是线程安全的)获取connection对象，用其处理请求，隐含的将Connection对象封闭在线程中。
+        JDBC中的Connection对象不要求是线程安全的，线程从连接池(连接池是线程安全的)获取
+            connection对象，用其处理请求，隐含的将Connection对象封闭在线程中。
         Ad-hoc封闭
             完全由程序实现来承担
         栈封闭
