@@ -268,6 +268,12 @@ vim
         cmd1的stdout成为cmd2的stdin        
 	    管线命令仅会处理 standard output,对于 standard error output 会予以忽略
 	    管线命令必须要能够接受来自前一个指令的数据成为 standard input 继续处理才行
+    '-'可以 表示stdin与stdout
+        tar -cvf - /home | tar -x - -C /tmp/homebackup        
+    为不支持管线的指令提供参数
+        很多指令其实并不支持管线命令,因此我们可以透过 xargs使该指令可以使用stdin
+        cut -d ':' -f 1 /etc/passwd | xargs -e'sync' -n 1 id
+        
     截取
         cut 截取出行内我们想要的数据
 	        cut -d '分隔字符' -f '数字表示的段,逗号间隔'
@@ -305,30 +311,10 @@ vim
         paste [-d] file1 file2
             直接将两个文件的行连在一起 -d 分隔符默认为tab, 
             file部分写为-，则表示来自stdin
-    管线中'-'可以表示stdin
-    为不支持管线的指令提供参数
-        很多指令其实并不支持管线命令,因此我们可以透过 xargs使该指令可以使用stdin
-        cut -d ':' -f 1 /etc/passwd | xargs -e'sync' -n 1 id
     大文件分割
         split [-bl] file Prefix
             -b 按大小划分 -l 按行数划分 Prefix为前缀即划分后保存文件名的前缀
             
-            
-            
-               
-	    
-
-
-
-
-
-        
-
-
-    
-    
-
-
 
 
 
@@ -341,7 +327,8 @@ vim
         -Bn 即Before除本行外前面的n行也显示
         -v 反选
             xxx | grep -v '^$' #不要空行
-    [] 匹配一个[]表示的集合中的字符，除下述的形式外，可以更一般的使用[mnpq]表示集合
+    [] 匹配一个[]表示的集合中的字符，
+        除下述的形式外，更一般的使用[mnpq]表示集合，[^abc]匹配不是abc的字符
 --------------------------------------------------------------------------------------
         [:alnum:] 0-9a-bA-B     [:alpha:] a-bA-B        [:blank:] 空格与tab
         [:digit:] 0-9           [:xdigit:] 16进制数字符 [:gragh:] 除去空格与tab外的所有
@@ -350,7 +337,7 @@ vim
 --------------------------------------------------------------------------------------
         [:digit:] 代表0-9。故需要匹配数字时需要写成[[:digit:]]。其他的同理
     行首行尾
-        ^ $会有dos与unix的断行方式的干扰
+        ^ $ 注：会有dos与unix的断行方式的干扰
     单个字符的重复
         .表示任意一个字符
         *表示重复左边的字符0次或多次
@@ -360,10 +347,142 @@ vim
             a+b匹配     ab，aaab ……
             a?b匹配     ab，b。
         {n}，{n,}，{n,m} 重复n次，n次以上，n到m次
+            由于{}在shell中有特殊含义，故需要\来转义
     匹配组
         (pattern) 匹配并获取此匹配到匹配组集合
         (?:pattern) 匹配 pattern 但不获取匹配结果，
             在匹配“abc或abd”两种之一时，可以写为abc|abd ，使用这里的方式可简写为ab(?:c|d)
-        (?=pattern) 正向肯定预查，Morris(?=1|2|7)
-
+        (?=pattern) 正向肯定预查，Morris(?=1|2|7) 会查到Morris1，Morris2与Morris7
+            并且只匹配Morris，不包含127，且不会匹配后面不是127的Morris
+        (?!pattern) 正向否定预查
+        (?<=pattern) 反向肯定预查，(?<=Morris)[127]，同上例，这次只查1 2 7，
+        (?<!pattern) 反向否定预查，(?<!Morris)[127]，即查前面不是Morris的1 2 7
+    sed
+        -n 使用后，只有被处理的一行才会显示出来；默认情况是全都显示
+        -f filename 写入文件
+        ''内函数
+            d删除2到5行
+                xxx | sed '2,5d' 
+            a i新增 在2行后新增一行,2a后的内容还可以用\来进行多行插入，i替换a表示前一行
+                xxx | sed '2a nothing is everything' 
+            c 行取代
+                xxx | sed '2,5c No.2-No.5 lines gone'
+            p 打印 与-n一同使用，打印某行内容，不加-n指定的行会重复打印两次
+                xxx | sed '2,4p'
+            s/xxx/aaa/g 替代 ，aaa去掉则为删除
+                /sbin/ifconfig eth0 | grep 'inet ' | sed 's/^.*inet //g'
+        -i 直接修改文件
+            sed -i 's/xxx/aaa/g' xxxx.file
+    print
+        \a 警告声音输出  \b 退格键(backspace)  \f 清除屏幕 (form feed)
+        \n 输出新的一行  \r 亦即 Enter 按键    \t 水平的 [tab] 按键
+        \v 垂直的 [tab] 按键   \xNN NN 为两位数的数字,可以转换数字成为字符。
+        %ns 那个 n 是数字, s 代表 string ,亦即多少个字符;
+        %ni 那个 n 是数字, i 代表 integer ,亦即多少整数字数;
+        %N.nf 那个 n 与 N 都是数字, f 代表 floating (浮点),如果有小数字数,
+    awk   
+        NF 每一行 ($0) 拥有的字段总数
+        NR 目前 awk 所处理的是『第几行』数据
+        FS 目前的分隔字符,默认是空格键
+        使用$n表示行内第n个字段
+            last -n 5| awk '{print $1 "\t lines: " NR "\t columns: " NF}'
+            cat /etc/passwd | awk '{FS=":"} $3 < 10 {print $1 "\t " $3}'
+            cat XXX.txt | \
+            > awk 'NR==1{printf "%10s %10s %10s %10s %10s\n",$1,$2,$3,$4,"Total" }
+            > NR>=2{total = $2 + $3 + $4 #这里用了\[enter]也可以使用;作为{}中多个命令的间隔
+            > printf "%10s %10d %10d %10d %10.2f\n", $1, $2, $3, $4, total}'
+        
+Shell脚本
+    第一行
+        #!/bin/bash
+        宣告本shell脚本使用的bash
+    exit 0 #正确退出
+    read 读取用户键盘输入
+        read -p "please input xxx: " -t n argName  #等待时间单位秒
+    数值计算 var=$((${firstnu}*${secnu}))
+            echo "2.20*2.2" |bc #精确度为字符串中的最长小数点后位数
+            echo "scale=80; 4*a(1)" | bc
+    执行方式
+        source 在父程序中执行，变量会被保留
+        bash xxx.sh 在子程序中执行，除非export，否则不会被保留
+    判断 test
+        名字
+            -e exist此名存在    -f file这是个文件    -d dir这是个目录
+            -b blockdevice装置  -c character装置    -S Socket文件
+            -p pipe先进先出文件  -L 链接档           
+        权限
+            -r -w -x -u SUID属性  -g SGID属性  -k Sticky bit属性   -s 非空文件
+        文件
+            -nt newThan -ot oldThan -ef 是否为同一文件用于hardlink的判断
+        整数
+            -eq -ne -gt -lt -ge -le
+        字符串
+            -z 空字符串 -n 非空 == 相等 != 不等
+        多条件
+            -a and   -o or   ! 非
+        判断符号[]
+            [ -z $home ]
+            注：[ xx -x yy ]其中有四处空格分割
+    默认变量 
+        对于一行命令，如 command aa bb cc xx
+        $0=command $1=aa $2=bb ...
+        $#表示参数总数，不算0号
+        $@表示【 "$1" "$2" "$3" "$4" 】
+        $*表示【 "$1c$2c$3c$4" 】其中c一般是空格
+        shift命令：变量偏移，可加数字参数，表示从左开始偏移变量
+    条件
+        if [ xxxxx ]; then
+            # do something
+        elif [ xxx ]; then
+            # do xx
+        else
+            # do
+        fi
+        if的条件可以用多个部分 [ "${a}" -eq "a" -a "${b}" -eq "b"]就相当于
+            [ "${a}" -eq "a" ] && [ "${b}" -eq "b"]
+        
+    多条件
+        case $arg in
+            "aa")
+                # do
+                ;;      #跳出
+            "bb")
+                # do
+                ;;
+            *)          #其他情况
+                # do
+                exit 1
+                ;;
+        esac
+    函数
+        function fname(){
+            # do something
+        }
+        同样靠 $1 $2来使用参数，fname aa bb; 来调用并传参
+    循环
+        while [ xxx ];do 
+            #
+        done
+        方式二
+        until [ xxx ];do 
+            #
+        done
+        方式三
+        for var in x1 x2 x3 ...;do
+            #
+        done
+        方式四
+        for (( i=1; i<=${nu}; i=i+1 )); do
+            s=$((${s}+${i}))
+        done
+    DEBUG
+        sh [-nvx] xxx.sh
+        -n 仅检查语法 -v 执行前打印script -x 打印使用到的scirpt
+        
+        
+        
+        
+        
+        
+        
 
