@@ -325,8 +325,9 @@ vim
     grep
         -An 即After除本行外后续的n行也显示出来
         -Bn 即Before除本行外前面的n行也显示
-        -v 反选
-            xxx | grep -v '^$' #不要空行
+        -v 反选  如 xxx | grep -v '^$' #不要空行
+        除使用管线外，还可以直接使用文件
+            grep 'pattern' fileA fileB ...
     [] 匹配一个[]表示的集合中的字符，
         除下述的形式外，更一般的使用[mnpq]表示集合，[^abc]匹配不是abc的字符
 --------------------------------------------------------------------------------------
@@ -478,11 +479,62 @@ Shell脚本
     DEBUG
         sh [-nvx] xxx.sh
         -n 仅检查语法 -v 执行前打印script -x 打印使用到的scirpt
-        
-        
-        
-        
-        
-        
+###############################################################################
+账号管理与ACL权限
+    登录
+            id morris 查看系统中morris账户的有无以及uid、gid
+            ll -d /home/morris 根据文件夹记录的uid、gid去/etc/passwd文件中查找对应账户的名字
+        登录过程
+            根据输入账号查找/etc/passwd，取出uid，根据uid查找/etc/shadow核对密码，成功则进入shell
+        /etc/passwd -rw-r--r--
+            账户名:密码(显示为x):UID(0管理员1-999系统账户1000及以上给一般使用者):GID(与/etc/group有关):用户信息说明:家目录:Shell
+        /etc/shadow -rw-------或----------
+            账户名:加密后的密码及盐值($(1|5|6)$salt$xxxxx):最近密码更动日期(自1970年1月1日累加):密码不可更动天数:密码需要更新天数:更新前警告天数:过期后(登录会强制要求改密)宽限天数:账户失效日期(19700101天数):保留
+            $1使用md5 $5使用SHA256 $6使用SHA512
+            authconfig --test | grep hashing 查看shadow的加密机制
+        忘记密码
+            普通用户通过root用户使用passwd
+            root用户重启进入单人维护模式、或以liveCD开机进入根目录修改/etc/shadow将root的密码字段清空
+    群组
+        /etc/group 
+            组名:群组管理员用密码此处为x已移步到gshadow文件:GID:群组支持账户','间隔      
+        有效群组与初始群组
+            初始群组：即passwd文件中的GID，用户登入系统立即拥有此群组权限，
+                且由于是初始群组，不需要再group文件中的第四字段写入该账户
+            有效群组
+                groups 命令可以获取本用户的所有群组，其首个即为有效群组
+                newgrp 命令可以进行有效群组切换
+                    必须是本用户支持的群组，且是以另一个shell来提供功能的
+            加入另外的群组
+                usermod root命令
+                gpasswd 群组管理员命令
+        /etc/gshadow
+            组名:密码(若开头为!或为空则表示无群组管理员):群组管理员账号:群组成员(与group文件相同)
+    账号
+        用户添加
+            useradd [-u UID] [-g 初始群组] [-G 次要群组] [-mM]
+                    [-c 说明栏] [-d 家目录绝对路径] [-s shell] 使用者账号名
+                M表示不要建立家目录，默认为m相反
+                先在/etc/passwd中建立新的一行，再建立shadow文件中一行填入相关参数，
+                    再在group中加入新的一个一模一样的组名，最后在/home下建立其家目录
+                -r 会建立系统账户，即uid在1-999之间
+            参考档  useradd -D
+                GROUP=100 ，100即为users这个群组，
+                    私有群组机制：建立与账户名相同的群组给用户，自家目录权限700
+                    公有群组机制：使用users作为初始群组，自家目录权限755
+                HOME=/home 家目录位置
+                EXPIRE= 账户失效日期 shadow的第8字段
+                SHELL=/bin/bash 默认shell程序
+                SKEL=/etc/skel 家目录参考，将其中内容复制到用户家目录
+                CREATE_MAIL_SPOOL=yes 建立使用者邮箱  
+                    默认mailbox文件在/var/spool/mail/morris
+        passwd  所有人均可以使用此更改个人密码
+            --stdin 通过管线接收密码输入
+            -l 锁定，在shadow文件第二字段加入!使其失效
+            -u 解除锁定
+            -S shadow文件中的密码相关信息
+            -n 不可更动天数 -x 必须更改的天数 -w 密码过期前警告天数 -i 
+
+
         
 
