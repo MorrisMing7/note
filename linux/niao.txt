@@ -152,6 +152,8 @@ vim
             -n保留旧文件转换内容到新文件
             -k保留文件原本的mtime时间
 开始bash
+    命令行前面的内容
+        $PS1
     编辑
         Ctrl+ae 移动光标到行首尾
         Ctrl+uk 删除光标前后内容
@@ -233,7 +235,7 @@ vim
         ;连续指令分割
         ~用户家目录
         $取变量
-        &工作控制，将指令变为背景下工作
+        &工作控制，将指令变为背景下工作 使用jobs查看正在背景中执行的任务
         !逻辑非
         > >> < << 数据流重导向
         '' $作为文本
@@ -402,7 +404,7 @@ Shell脚本
         read -p "please input xxx: " -t n argName  #等待时间单位秒
     数值计算 var=$((${firstnu}*${secnu}))
             echo "2.20*2.2" |bc #精确度为字符串中的最长小数点后位数
-            echo "scale=80; 4*a(1)" | bc
+            echo "scale=80; 4*a(1)" | bc -lq
     执行方式
         source 在父程序中执行，变量会被保留
         bash xxx.sh 在子程序中执行，除非export，否则不会被保留
@@ -489,28 +491,16 @@ Shell脚本
         /etc/passwd -rw-r--r--
             账户名:密码(显示为x):UID(0管理员1-999系统账户1000及以上给一般使用者):GID(与/etc/group有关):用户信息说明:家目录:Shell
         /etc/shadow -rw-------或----------
-            账户名:加密后的密码及盐值($(1|5|6)$salt$xxxxx):最近密码更动日期(自1970年1月1日累加):密码不可更动天数:密码需要更新天数:更新前警告天数:过期后(登录会强制要求改密)宽限天数:账户失效日期(19700101天数):保留
+            账户名:加密后的密码及盐值($(1|5|6)$salt$xxxxx):最近密码更动日期(自1970年1月1日累加):
+            密码不可更动天数:密码需要更新天数:更新前警告天数:
+            过期后(登录会强制要求改密)宽限天数:账户失效日期(19700101天数):保留
             $1使用md5 $5使用SHA256 $6使用SHA512
             authconfig --test | grep hashing 查看shadow的加密机制
         忘记密码
             普通用户通过root用户使用passwd
             root用户重启进入单人维护模式、或以liveCD开机进入根目录修改/etc/shadow将root的密码字段清空
-    群组
-        /etc/group 
-            组名:群组管理员用密码此处为x已移步到gshadow文件:GID:群组支持账户','间隔      
-        有效群组与初始群组
-            初始群组：即passwd文件中的GID，用户登入系统立即拥有此群组权限，
-                且由于是初始群组，不需要再group文件中的第四字段写入该账户
-            有效群组
-                groups 命令可以获取本用户的所有群组，其首个即为有效群组
-                newgrp 命令可以进行有效群组切换
-                    必须是本用户支持的群组，且是以另一个shell来提供功能的
-            加入另外的群组
-                usermod root命令
-                gpasswd 群组管理员命令
-        /etc/gshadow
-            组名:密码(若开头为!或为空则表示无群组管理员):群组管理员账号:群组成员(与group文件相同)
     账号
+        id morris
         用户添加
             useradd [-u UID] [-g 初始群组] [-G 次要群组] [-mM]
                     [-c 说明栏] [-d 家目录绝对路径] [-s shell] 使用者账号名
@@ -528,13 +518,212 @@ Shell脚本
                 SKEL=/etc/skel 家目录参考，将其中内容复制到用户家目录
                 CREATE_MAIL_SPOOL=yes 建立使用者邮箱  
                     默认mailbox文件在/var/spool/mail/morris
-        passwd  所有人均可以使用此更改个人密码
-            --stdin 通过管线接收密码输入
-            -l 锁定，在shadow文件第二字段加入!使其失效
-            -u 解除锁定
-            -S shadow文件中的密码相关信息
-            -n 不可更动天数 -x 必须更改的天数 -w 密码过期前警告天数 -i 
-
+            usermod
+                与ueradd 命令参数相同，多了 -aG添加群组，-L -U 即passwd中的-l-u
+            userdel morris
+                -r 删除家目录
+        密码修改
+            passwd  所有人均可以使用此更改个人密码
+                --stdin 通过管线接收密码输入 echo "xxx" | passwd --stdin morris
+                -l 锁定，在shadow文件第二字段加入!使其失效
+                -u 解除锁定
+                -S shadow文件中的密码相关信息
+                -n 不可更动天数 -x 必须更改的天数 -w 密码过期前警告天数 -i 密码失效期
+            change -l morris 查看morris的密码信息
+                -d -m -M -W -I -E分别对应passwd的3-8字段
+            chpasswd
+                echo "morris:abcdef" |chpasswd
+    群组
+        /etc/group 
+            组名:群组管理员用密码此处为x已移步到gshadow文件:GID:群组支持账户','间隔      
+        有效群组与初始群组
+            初始群组：即passwd文件中的GID，用户登入系统立即拥有此群组权限，
+                且由于是初始群组，不需要再group文件中的第四字段写入该账户
+            有效群组
+                groups 命令可以获取本用户的所有群组，其首个即为有效群组
+                newgrp 命令可以进行有效群组切换
+                    必须是本用户支持的群组，且是以另一个shell来提供功能的
+            加入另外的群组
+                usermod root命令
+                gpasswd 群组管理员命令
+        /etc/gshadow
+            组名:密码(若开头为!或为空则表示无群组管理员):群组管理员账号:群组成员(与group文件相同)
+        新增删除
+            groupadd -g gid [-r] gname
+                -r 系统群组
+            groupmod -g gid -n　newname gname
+            groupdel gname 只有在没有任何一个账户以该组最为初始组时才能删除
+        管理员
+            gpasswd (root动作)
+                -A user1 gname 将gname的控制交给user1
+                -M user1,user2 ganme 将user1，user2 加入ganme
+                -r gname 移除密码
+                -a user3 gname 添加某人
+                -d user1 gname 删除某人
+    ACL 权限控制列表
+        针对复杂的权限，如一个目录多人使用权限不同
+        getfacl 取得某文件或目录的ACL设定项
+        setfacl 设置
+            setfacl [-bkRd] [{-m|-x} args] fname
+            -m 设定acl参数 
+                u:[用户列表]:[rwx] 或 g:[群组列表]:[rwx]  逗号间隔  权限可以使用-表示无
+                m:[权限] mask设定，即有效权限，不在此设定范围之内的权限无效
+            -x 删除acl参数  如-x u:user1 xxxdir 
+            -b 移除所有acl参数 -k 移除预设的参数
+            -R 递归设定 -d 对目录进行预设设定
+        权限继承
+            d:[u|g]:[user|group]:rwx
+    身份切换
+        su 直接使用su表示变量读取方式为non-login shell ，即很多环境变量不会改变
+        su - 与上述相反，以login shell方式切换为root，环境变量会改变
+        su - -c "head -n 3 /etc/shadow" 以root 身份执行一个命令
+        su -l user1 以login方式切换为user1
+    切换身份运行
+        sudo -b [-u username]
+            b 在背景中执行，不对当前shell产生
+            u 切换为username运行，不加默认切换root
+        visudo
+            user1 ALL=(root) !/usr/bin/passwd, /usr/bin/passwd [A-Za-z]*, !/usr/bin/passwd root
+            让user1 可以更改其他人密码，而不可更改root密码
+    近期登录信息
+        w,who,last,lastlog
+    消息
+        write username [用户所在终端接口]
+        mesg n 用户设置不接收消息，root消息不可拒绝 y 接收消息
+        mail -s "topic" username 回车写右键内容最后一行"."结束 Ubuntu没装mail
+################################################################################################
+工作排程
+    atd服务 sudo apt install at #ubuntu16.04没有atd服务，装个at先
+        systemctl restart|enable|status atd #重启|开机自启动|状态查看
+    at [-mldv] TIME -c commandxxx xx
+        m 完成后邮件通知使用者
+        l 等价于atq，列出当前at的排程
+        d 等价于atrm，删除某排程
+        c 列出该工作的实际指令内容
+        TIME格式 
+            HH:MM 如 12:00,若当前时间超过了,则明天这个时间进行该工作
+            HH:MM YYYY-MM-DD 如 13:20 2018-12-11
+            HH:MM[am|pm] [Month][Date] 如03pm June 1
+            HH:MM[am|pm] + number [minutes|hours|days|weeks] 如 04pm + 3 days
+                或 now + 3 hours
+        at在运行工作时会cd到下达工作指令时的那个目录中去
+        at工作的输出不会显示在当前的shell中，可以使用如 echo "hello" > /dev/tty1
+            来输出到指定的终端
+        如果没有输出，默认是不会发送邮件的，可以使用-m来指示必须发送
+        at在背景中执行，即不与当前shell相关，即使脱机后，仍能继续任务
+        使用限制
+            找寻/etc/at.allow其中的用户允许使用,若无则找/etc/at.deny,其中的用户不允许使用,
+            两个文件系统默认保留/etc.deny，其中的内容每行一个账户
+            若二者皆无，则只有root可以进行at排程,
+    batch 当负载低于设定值(1,5)时，才执行下达的内容
+    工作负载
+        uptime 打印当前时间，系统工作时长，用户数，在1,5,15分钟内的系统负载
+    循环排程 crontab 
+        -u root指令，帮其他人建立删除排程
+        -e 编辑循环排程
+        -l 查看所有当前排程
+        -r 移除所有排程
+        crontab -e后编辑文件，每行代表一个排程，空格间隔的每个字段分别表示
+                分   时   日   月   周   指令内容 
+            其中每个字段可以用
+            *表示任意时间
+            ,表示列举
+            -表示范围
+            /n表示每n执行一次
+            如 */5 * 1-20 1,3 * command xx xxxx
+            表示1月3月的1-20号，每隔5分钟，执行一次该指令
+        /var/spool/cron/crontabs/morris文件，排程被写到这里
+        注意
+            周与日月不可共存
+            资源分配 不要在同一时间启动太多排程，可以如下
+                1,6,11,16,21,26,31,36,41,46,51,56 * * * * root CMD1
+                2,7,12,17,22,27,32,37,42,47,52,57 * * * * root CMD2
+                3,8,13,18,23,28,33,38,43,48,53,58 * * * * root CMD3
+                4,9,14,19,24,29,34,39,44,49,54,59 * * * * root CMD4
+            取消不必要的输出 > /dev/null
+    被延误的排程 anacron
+        由于关机或其他某些原因超时且没有被运行的排程
+        /var/spool/anacron/cron.daily 取出最近一次执行 anacron 的时间戳
+        与目前的时间比较,若差异天数为 1 天以上 (含 1 天),就准备进行指令
+##########################################################################################
+进程管理
+    程序：二进制文件
+    进程：是程序在某些数据上的运行，独立拥有系统资源
+    线程：是cpu调度的基本单位，
+    进程呼叫fork-and-exec
+    工作控制
+        前景与背景：出现提示字符允许操作的环境为前景，
+            相对的使用&在后台运行且无法使用Ctrl+c终止的为背景
+        背景中执行的任务有stdout或stderr时仍会输出到屏幕上，可以在命令中加入错误重定向
+            xxxxx xxxxx 2>errfile
+        Ctrl+z 可以将当前的任务暂停放到背景中去
+        jobs可以查看背景中的工作
+            -l 加上pid -r 只看正在运行的 -s 只看暂停的
+            其中+-号表示最后一个与倒第二个被放入背景的工作
+        fg %n
+            直接fg会取出带+号的工作；
+        bg %n
+            将n号工作在背景中运行
+        脱机
+            在工作未结束的情况下脱机，背景中的任务会被中断
+            nohup commandxx argxx [&]
+            在用户注销后仍会继续运行
+    进程管理
+        ps 一般使用“-lA” 或“aux”作为参数
+            ps -lA 详细信息包含以下内容
+                F进程旗帜，说明权限； 4为root，1表示仅fork没有exec
+                S状态，R运行中，S睡眠，D不可唤醒如I/O等待，T停止背景暂停或trace，Z僵尸
+                C表示CPU使用率 PRI/NI表示优先级小者优先
+                ADDR内存位置running的进程一般会显示为-
+                SZ内存使用量；WCHAN进程是否运作中-表示正在运作
+                TTY终端位置；远程登录使用的是动态借口pts/n
+                TIME使用的cpu时间
+                CMD触发此进程的指令
+            ps aux
+        top 
+            -d 接秒数，更新频率
+            -b 批次，可以使用数据流重导向输出文件；-n搭配，表示需要几次结果
+            -p 观察指定pid
+            top期间指令
+                ? 帮助；P cpu排序；M 内存排序；N pid排序；T cpu使用时间排序；
+                k 给某个pid一个信号；r 重设某个pid的nice值；q 退出
+        pstree 
+            -A 以ascii字符连接 -U 以utf-8字符连接(可能出问题)
+            -p pid -u所属账户名
+        kill -signal pid 
+            kill -l可以列出可以使用的信号
+            -1 重新读取配置文件，似重启 -2 等价于Ctrl+c -9 强制删除工作
+            -15 正常退出； -19 等价于Ctrl+z
+        killall
+            killall -i -9 bash
+        优先级
+            PRI是核心调整的，用户无权干涉，可以通过调整NI值来间接干预
+            PRI=PIR+nice 实际并非如此，由内核决定
+        系统资源
+            free 内存使用
+                显示单位-bkmgh分别表示字节单位，h表示有系统决定显示什么单位
+            uname 核心相关
+                -a所有 -s核心名 -r核心版本 -m硬件名x86_64等 -pCPU类型 -i硬件平台
+            uptime 负载，即top的最上面一行
+            netstat 网络
+                -a所有；-t tcp数据；-u udp数据；-n以端口号显示；-l列出监听的服务；-p列出pid
+            dmesg 核心产生的信息
+                dmesg | more #超多
+            vmstat [间隔时间 [次数]]系统资源变化，显示内容如下
+                进程 r等待运行的进程数；b不可唤醒的进程数
+                内存 swpd虚拟内存使用量；free未使用量；buf缓冲区；cache高速缓存
+                置换空间 si由磁盘读取出的进程量；so由于内存不足写入磁盘的进程容量
+                磁盘 bi读入区块量；bo写入区块量
+                系统 in每秒被中断进程次数；cs每秒时间切换次数；
+                cpu us非核心使用；sy核心使用；id闲置；waI/O耗费；st虚拟机占用
+            
+                 
+        
+        
+        
+        
+        
+        
 
         
 
