@@ -1,4 +1,4 @@
-常用命令
+ 常用命令
     文件夹
         cd x
             ~家
@@ -716,7 +716,58 @@ Shell脚本
                 磁盘 bi读入区块量；bo写入区块量
                 系统 in每秒被中断进程次数；cs每秒时间切换次数；
                 cpu us非核心使用；sy核心使用；id闲置；waI/O耗费；st虚拟机占用
-            
+            /proc/* 内存中的数据是写入到这里的
+                各进程的pid以目录形式存在与/proc
+                比如systemd的pid是1，ll /proc/1可以看到其中的数据
+            fuser 借由文件或文件系统找到使用该文件的进程
+                -u 列出进程pid及其拥有着 
+                -m 列出的档名会上提到文件系统的最顶层，对umount很有用
+                -v 列出每个文件与进程和指令
+                -k 将-9这个信号传给该pid；-i配合使用，询问
+                fuser -uv /root 显示中，ACCESS表示：
+                    c此进程在当前目录下(非子目录)
+                    e可被触发为执行状态
+                    f被开启的文件
+                    r顶层目录
+                    F文件被开启但等待回应中
+                    m可能是分享的动态函数库
+            lsof 进程开启的文件档名
+                -a 并且的意思 -u接username累出使用者进程开启的文件
+                -U仅列出UnixLike系统的socket文件 +d接目录找出此目录下被开启的文件
+            pidof 某个正在运行程序的pid
+                -s仅列出一个 -x同时列出ppid
+    SELinux
+        自主访问控制DAC (Discretionary Access Control)
+            依据进程拥有者与文件资源的rwx权限决定存取能力
+            > root拥有最高权限，一旦被取得root权限则可以在系统上进行任何资源存取
+            > 使用者可以取得进程来变更资源访问权限
+        委任访问控制MAC(Mandatory Access Control)
+            主体Subject 被管理的进程
+            目标Object 文件系统
+            政策Policy  target：针对网络限制多，本机较少
+                        minimum：仅针对选择的进程来保护
+                        mls：完整SELinux限制，严格。
+            安全性本文security context 主体与目标除政策指定外，安全性本文必须一致才能存取
+                ls -Z查看安全性本文 显示为三个字段Identify:role:type
+                如：system_u:object_r:admin_home_t:s0
+                身份识别Identify
+                    unconfined_u不受限的用户，由不受限的进程产生，预设bash环境不受SELinux管制
+                    system_u系统用户
+                角色role
+                    object_r代表文件或目录等文件资源
+                    system_r代表进程，一般使用者也会被指为system_r
+                类型type
+                    在文件资源上被称为类型type，在主体进程上被称为领域domain
+            政策targeted
+            unconfined_u:unconfined_r:xxx表示用来操作系统的进程如bash，Xwindow等
+            system_u:system_r:xxx非交谈式系统运作进程，多数系统进程是此类
+                触发一个可执行的目标文件，其类型为xxx，此xxx类型使主体进程具有xxa这个领域，
+                政策针对xxa这个领域会有许多规则，包括其可以读到的目标资源类型。
+                最后可不可以读到资料就看rwx权限了
+
+
+
+
                  
         
         
