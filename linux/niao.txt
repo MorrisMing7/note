@@ -764,17 +764,98 @@ Shell脚本
                 触发一个可执行的目标文件，其类型为xxx，此xxx类型使主体进程具有xxa这个领域，
                 政策针对xxa这个领域会有许多规则，包括其可以读到的目标资源类型。
                 最后可不可以读到资料就看rwx权限了
+        三种模式
+            getenforce 命令显示当前的模式
+                enforcing强制，已经正确开始限制domain/type
+                permissive宽容，仅有警告信息，不会实际限制domain/type的存取
+                disable关闭，SELinux没有运作
+            sestatus 查看当前的政策等信息
+                可以直接修改 vim /etc/selinux/config来改变政策
+                将enforce或permissive改为disable或者反过来，都需要重启
+            setenforce [0|1] #0为permissive 1为enforce
+        政策规则
+            getsebool [-a] [ruleName] #查看规则布尔值
+            setsebool -P ruleName [0|1] #修改规则布尔值
+            seinfo 当前政策下的统计信息
+                -urtb 当前政策的所有的身份/角色/类别/规则的种类
+            sesearch -A 查看主体与目标的对应
+                 [-s 主体类别] [-t 目标类别] [-b 规则布尔名]
+        安全本文修改
+            chcon [-R] [-t type] [-u user] [-r role] file
+            chcon [-R] --reference=范例文件 file
+            restorecon [-Rv] file #回复文件或目录的设置
+                -R表示递归
+        目录默认的安全本文
+            semanage {login|user|port|interface|fcontext|translation} -l
+            fcontext用于安全本文，-l为查看
+            -a 增加；-m 修改；-d删除；
+################################################################################
+系统服务--daemon
+    /etc/init.d/  中基本是bash shellscript写成的 
+        可以使用 start stop restart status 启动关闭重启和状态查看
+        /etc/rc.d执行等级/SXXdaemon XX表示数字启动顺序
+            执行等级包含7个0-6:1单人维护3纯文本5文字加图形界面
+    systemd
+        平行处理服务加速开机
+        一只systemd服务(常驻内存)+一条systemctl指令处理
+        服务依赖性自检，自动启动依赖的服务
+        daemon分类--服务单位unit：service,socket,target,path,snapshot,timer
+        daemon群组--target类似init的runlevel
+        init不可取代
+            只有135对应到systemd的target中，未完全对应
+            systemctl不支持自定义参数而/etc/init.d/daemon就是纯脚本支持参数
+            手动执行的服务不会被systemd管理
+            systemd启动中无法交互，
+    配置文件  执行优先递减：
+        /etc/systemd/system/:管理员依据主机系统的需求所建立的执行脚本,
+            类似/etc/rc.d/rc5.d/Sxx 之类的功能
+        /run/systemd/system/:系统执行过程中所产生的服务脚本,       
+        /usr/lib/systemd/system/:每个服务最主要的启动脚本设定,
+            类似以前的 /etc/init.d 底下的文件
+    管理服务
+        systemctl [command] [unit] #其中的command包括 ：
+        start,stop,restart,reload(重载配置文件使生效), 
+        enable(开机启动),diable,
+            即从/etc/systemd/system/下删除一条连接档
+        mask(注销服务)，unmask
+            即将/etc/systemd/system/下相关的连接到/dev/null
+        is-active(是否运作中),is-enable(是否预设启动)
+        status(查看状态), 如systemctl status atd.service会显示
+            loaded状态
+                enable/disable
+                static不可自启动，可被其他enable的服务唤醒
+                mask不可被启动，已被强制注销(未删除)
+            active状态
+                active(running)一只或多只程序正在执行
+                active(exited)仅执行一次就正常退出。
+                active(waiting)正在执行中，但在等待其他事件
+                inactive未运行
+        list-units 依据unit列出目前有启动的 unit。若加上 --all 才会列出没启动的。
+        list-unit-files 依据/usr/lib/systemd/system/内的文件,将所有文件列表说明。
+            --type=service 只列出service
+            如  systemctl list-units --type=service |less
+    操作环境target
+    
+ 
 
 
 
 
-                 
-        
-        
-        
-        
-        
-        
 
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
