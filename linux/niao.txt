@@ -835,7 +835,62 @@ Shell脚本
             --type=service 只列出service
             如  systemctl list-units --type=service |less
     操作环境target
-    
+        systemctl get-default #获取当前target 图形界面graphical.target
+        systemctl set-default xxx.target  #设置默认target
+        systemctl isolate multi-user.target  #切换为纯文本模式
+        systemctl poweroff关机 reboot重启 rescue救援 emergency紧急救援
+            suspend挂起 即将系统状态保存到内存，关闭大部分硬件，按下唤醒按钮时再回复系统数据
+                重新启动被关闭的硬件，唤醒速度快
+            hibernate休眠 
+                将系统状态保存到硬盘并关机，再次唤醒时，速度与硬盘读取速度有关
+    服务依赖关系
+        systemctl list-dependencies [unit] [--reverse]
+            不加unit则列出当前target环境下用到的unit
+            --reverse列出依赖此unit的unit
+    一些目录
+        cat /etc/sysctl.conf #配置
+        ls /var/lib  #数据
+        ls /run/ #daemon暂存档：lockfile，PID
+        cat /etc/services #服务与端口的对应。不建议修改
+    自己做服务
+        vim /xxx/xxx.sh #写服务内容
+        chmod a+x /xxx/xxx.sh
+        vim /etc/systemd/system/xxx.service #写入如下内容
+            [Unit]
+            Description=test my own services
+            Requires=atd.service
+            [Service]
+            Type=simple
+            ExecStart=/bin/bash -c " echo /xxx/xxx.sh | at now"
+            [Install]
+            WantedBy=multi-user.target
+        systemctl daemon-reload
+        systemctl start xxx.service
+        ##################################
+        vim /etc/systemd/system/xxx.timer
+            [Unit]
+            Description=xxx timer
+            [Timer]
+            OnBootSec=2hrs
+            OnUnitActiveSec=2days
+            [Install]
+            WantedBy=multi-user.target
+        systemctl daemon-reload
+        systemctl enable xxx.timer
+        systemctl restart xxx.timer
+        
+
+
+################################################################################
+开机流程
+    BIOS(basic input output system)--加载CMOS信息
+    MBR磁盘首个扇区
+    每个系统都会保留一个启动扇区boot sector，
+        windows默认在MBR与boot sector都装一份boot loader，
+    boot loader
+        提供选单:用户可以选择不同的开机项目,这也是多重引导的重要功能!
+        载入核心文件:直接指向可开机的程序区段来开始操作系统;
+        转交其他 loader:将开机管理功能转交给其他 loader 负责。
  
 
 
