@@ -1,0 +1,826 @@
+渐进记号
+渐进紧确 Θ(g(n))=f(n) 存在正常量c1,c2,n0, 当n>n0,有  c1*g(n)<=  f(n)  <=c2*g(n)
+渐进上界 O(g(n))=f(n) 存在正常量c1,n0,     当n>n0,有       0<=  f(n)  <=c1*g(n)
+渐进下界 Ω(g(n))=f(n) 存在正常量c1,n0,     当n>n0,有       0<=c1*g(n) <=f(n)
+非渐进   o(g(n))=f(n) 存在正常量c1,n0,     当n>n0,有       0<=  f(n)  < c1*g(n)  更高阶的无穷大
+非渐进   ω(g(n))=f(n) 存在正常量c1,n0,     当n>n0,有       0<=c1*g(n) <=f(n)     低阶的无穷大
+
+插入排序
+    Insert_sort(A) //A[0..A.last_idx]
+        for i=2 to A.last_idx
+            key=A[i]
+            k=i-1
+            while k>0 and A[k]>key
+                A[k]=A[k+1]
+                --k
+            A[k]=key
+归并排序
+    Merge(A,low,mid,high)
+        ll=low-mid+1   //A[low..mid]
+        lr=hig-mid   //A[mid+1..high]
+        for i=0 to ll-1
+            B[i]=A[low+i]
+        for i=0 to lr-1
+            C[i]=A[mid+1+i]
+        p=low
+        q=mid+1
+        i=low
+        while p<=mid and q<=high
+            if B[p]<C[q]
+                A[i]=B[p]
+                ++p
+            else
+                A[i]=C[q]
+                ++q
+            ++i
+        if q<high 
+            while q<=high
+                A[i]=C[q]
+                ++i ++q
+        elseif p<mid
+            while p<=mid
+                A[i]=B[p]
+                ++i ++p
+    Merge_sort(A,low,high)
+        if low<high
+            mid=(low+high)/2
+            Merge_sort(A,low,mid)
+            Merge_sort(A,mid+1,high)
+            Merge(A,low,mid,high)
+
+最大子数组
+    Find_max_cross_mid(A,low,mid,high)
+        lmax=-Inf
+        lsum=0
+        lidx=mid
+        for i= mid downto low
+            lsum+=A[i]
+                if lsum>lmax
+                    lmax=lsum
+                    lidx=i
+        rmax=-Inf
+        rsum=0
+        ridx=mid
+        for i= mid+1 to high
+            rsum+=A[i]
+                if rsum>rmax
+                    rmax=rsum
+                    ridx=i
+        return (lidx,ridx,lsum+rsum)
+    Find_max_subarray(A,low,high)
+        if(low==high)
+            return (low,high,A[low]
+        mid=(low+high)/2
+        (llow,lhigh,lmax)=Find_max_subarray(A,low,mid)
+        (rlow,rhigh,rmax)=Find_max_subarray(A,mid+1,high)
+        (mlow,mhigh,mmax)=Find_max_cross_mid(A,low,mid,high)
+        return max(...)
+堆排序 
+    //向下调整某个元素，以保持大根的特性
+    Max_heapify(A,i)   //A[1..A.heap_size] 
+        key=A[i]
+        k=i
+        while k<A.heap_size
+            l=left(k)   //left child
+            r=right(k)  //right child
+            if l<=A.heap_size and A[l]>key
+                largest = l
+            else
+                largest = k
+            if r<=A.heap_size and A[r]>A[largest]
+                largest = r
+            if largest == k
+                break
+            A[largest]=key
+            k=largest
+    //建立大根堆
+    Build_max_heap(A)   //A[1..A.length]
+        A.heap_size=A.length
+        for i = A.length/2 downto 1
+            Max_heapify(A,i)
+    //堆排序
+    Heap_sort(A) 
+        Build_max_heap(A)
+        for i = A.length downto 2
+            swap(A[1],A[A.heap_size])
+            A.heap_size -= 1
+            Max_heapify(A,1)
+    //向上调整某一元素的值，以保持大根的特性
+    Max_heap_increase_key(A,i,key)
+        A[i]=key
+        k=i
+        while k>=1 and A[parent(k)]<key
+            A[k]=A[parent(k)]
+            k=parent(k)
+        A[k]=key
+    //插入元素
+    Max_heap_insert(A,key)
+        A[A.heap_size+1]=-Inf
+        A.heap_size++
+        Max_heap_increase_key(A,A.heap_size,key)
+快速排序
+    Partition(A,low,high)
+        i=low-1
+        for j= low to high
+            if A[j]<=A[high]   
+                ++i
+                swap(A[i],A[j])
+        return i+1
+    Partition(A,low,high)
+        i=low-1
+        k=0
+        for j=low to high
+            if A[j]<A[high]
+                tmp=A[j]
+                A[j]=A[i+k+1]
+                A[i+k+1]=A[i+1]
+                A[i+1]=tmp
+                ++i
+            elseif A[j]==A[high]
+                ++k
+                swap(A[i+k],A[j])
+        return (i+1+i+k)/2
+    Quick_sort(A,low,high)
+        if low<high
+            pivot=Partition(A,low,high)
+            Quick_sort(A,low,pivot-1)
+            Quick_sort(A,pivot+1,high)
+    //尾递归版本的
+    Tail_recursive_Quick_sort(A,low,high)
+        while low<high
+            p=Partition(A,low,high)
+            Tail_recursive_Quick_sort(A,low,p-1)
+            low=p+1
+    //区间模糊排序
+    Section_sort(A,low,high) //A中每个元素x由区间端点x.a与x.b构成，要求排序后存在i1<=i2<=i3...<=in,i1属于[x1.a,x1.b]
+        tmp.a=A[high].a
+        tmp.b=A[high].b
+        i=low-1
+        for j = low to high
+            if A[i].b<tmp.a
+                ++i
+                swap(A[i],A[j]
+            elseif A[i].a>tmp.b
+                continue
+            else
+                tmp.a=max(tmp.a,A[i].a)
+                tmp.b=min(tmp.b,A[i].b)
+线性时间排序
+    //计数排序,在已知元素范围的情况下，当k=O(n),运行时间Θ(n)
+    Count_sort(A,B,k)   //A[1..A.length] 将对A排序的结果放到B中，k代表A中元素的范围[0,k]
+        let C[0..k] be an array
+        for i= 0 to k
+            C[i]=0
+        for i = 1 to A.length
+            C[A[i]]++
+        for i=1 to k
+            C[i] += C[i-1]
+        for i= A.length downto 1
+            B[C[A[i]]]=A[i]
+            C[A[i]]--
+    //基数排序，当使用计数排序时，时间Θ(d(n+k))
+    Radix_sort(A,d)
+        for i = 1 to d
+            //use a stable sort to sort A on digit i
+    //桶排序，假设数据服从均匀分布(或桶大小平方和与总元素数呈线性关系），运行时间Θ(n)
+    Bucket_sort(A)  //A[1..A.length],A中元素属于[0,1)
+        n=A.length
+        let B[0..n-1] benew array
+        for i= 0 to n-1
+            let B[i] be empty list
+        for i=1 to A.length
+            // insert A[i] to list B[n*floor(A[i])]
+        for i=0 to n-1
+            Insert_sort(B[i])
+        //concatenate B[0..n-1]
+顺序统计量  //元素互异
+    Select(A,low,high,i)    //返回第i小的某个值
+        if low==high
+            return A[low]
+        pivot = random_partition(A,low,high)   //先在[low,high-1]随机选取一个与high交换的版本的partition
+        k = pivot-low+1
+        if k==i
+            return A[pivot]
+        elseif i<k
+            return Select(A,low,pivot-1,i)
+        else 
+            return Select(A,pivot+1,high,i-k)
+    //非递归版本
+    Select(A,low,high,i)
+        while(low<=high)
+            if low==high
+                return A[low]
+            pivot = random_partition(A,low,high)
+            k = pivot-low+1
+            if k==i
+                return A[pivot]
+            elseif i<k
+                high = pivot-1
+            else
+                low = pivot+1
+                i = i-k
+    //最坏时间为线性的选择
+    //  对数组进行划分划分为n/5个元素个数为5的小数组，分别找出每个小数组的中位数，
+    //  然后找出n/5个小组中位数的中位数，以此值作为枢轴进行划分，
+    //  可保证大于该值的数至少是3*(ceiling(1/2*ceiling(n/5))-2)>= 3/10*n-6
+     
+栈与队列
+链表
+有根树
+
+散列
+    冲突解决
+        链接法
+            将散列值相同的元素放到一个链表中
+
+    好的散列函数
+        简单均匀散列假设：每个关键字都被等可能的散列到每一个槽中
+        除法散列法
+            关键字k mod m以散列到m个槽中
+            m不应为2的整数p次幂，除非已知k的最低p位是均匀的，否则就应该考虑k的所有位
+            同时若k是以2^p为基数的(即k<2^p)，那m选择2^p-1则不会改变k的取值
+        乘法散列
+            h(k) = m*(k*A- floor(k*A) )
+            m一般选为2^p，p为整数，A为形如s/2^p的分数，s∈(0,2^p)，Knuth认为A为近似(sqrt(5)-1)/2时比较理想
+        全域散列
+            在执行开始时，从一组函数中随机选择一个作为散列函数，以确保没有某种输入一定会造成最差结果
+            设H为一组有限函数，将关键字全域U映射到{0..m-1}
+                对于k,l∈U,且k≠l,则满足h(k)=h(l)的h∈H的个数之多为|H|/m个，即从H中随机选取一h，k≠l且h(k)=h(l)的概率不大于1/m
+                这样的H被称为"全域的"
+            //一个全域散列函数类
+                选择一p使得k都在[0,p-1]的范围内Z=[0,p-1],Z`=[1,p-1],,
+                k的全域的大小显然大于m，即有p>m
+                    h_ab(k) = ( (a*k+b)%p) %m 
+                    H_pm = {h_ab:a∈Z,b∈Z`}
+        开放寻址
+            α=n/m<=1
+            在均匀的假设下，一次不成功查找的期望次数至多为"1/(1-α)"
+                一次成功查找期望次数为"1/α * ln( 1/(1-α) )"
+            为了插入一个元素要不断探查，以找到空槽，
+                探查次序依赖插入关键字与探查号
+                    h:U×{0..m-1}→{0..m-1}
+                对于每个关键字k，探查序列为
+                    <h(k,0)..h(k,m-1)>
+            //开放寻址法的插入
+            Hash_Insert(T,k)
+                for i=0 to m
+                    j=h(k,i)
+                    if T[j]==NIL or T[j]==Deleted  //不能直接删除开放寻址中的元素而是标记之
+                        T[j]=k
+                        return j
+                throw "hash table overflow"
+            //查找
+            Hash_Search(T,k)
+                for i=0 to m
+                    j=h(k,i)
+                    if T[j]==k
+                        return j
+                    elseif T[j]==NIL
+                        return NIL
+            线性探查
+                h(k,i) = (h`(k)+i)%m
+                有"一次群集"的问题，随着占用槽的越多，平均查找时间越来越长
+            二次探查
+                h(k,i) = (h`(k) +i*c1+ i^2*c2)%m
+                "二次群集",弱一点的群集问题
+            双重散列
+                h(k,i) = (h1(k) + i*h2(k)) %m
+                其中，为了能探查到所有位置，h2(k)的值必须与m互质(公约数只有1)。
+                    有种简单的设计方法，m取2的幂，h2只产生奇数
+                    或另m为素数，h2只产生比m小的值，例如h2=1+k%m`,其中m`<m
+        双重散列用到了Θ(m^2)种的探查序列，线性与二次探查只用了Θ(m)种,故前者相对更接近理想的均匀散列
+    完全散列
+        采用两级散列，每级采用全域散列,素数p大于所有关键字
+            第一级h(k)=(((a*k+b))%p)%m,选自H_pm,散列为m个槽每个槽中元素个数为n_i
+            第二级h(k)=(((a_i*k+b_i))%p)%m_i,选自H_pmi,散列为m_i个槽，m_i=n_i^2，以保证表中没有冲突
+        定理：
+            从H_pm中随机选取h，将n个关键字散列到m个槽中，m=n^2，表中出现冲突的概率小于1/2
+            从H_pm中随机选取h，将n个关键字散列到m个槽中，m=n，各个槽中元素数平方和期望小于2*n
+二叉搜索树
+    //查找某一关键字
+    biTree_Search(x,k)
+        while x!=NIL and x.key!=k
+            if k<x.key
+                x=x.left
+            else
+                x=x.right
+        return x
+    //寻找最小节点
+    biTree_minmum(x)
+        while x.left!=NIL
+            x=x.left
+        return x
+    //寻找最大节点同理 
+    //寻找节点后继
+    biTree_successor(x)
+        if x.right!=NIL
+            return biTree_minmum(x.right)
+        y=x.p
+        while y!=NIL and x==y.right
+            x=y
+            y=y.p
+        return y
+    //前驱
+    biTree_predecessor(x)
+        if x.left!=NIL
+            return biTree_maxmum(x.left)
+        y=x.p
+        while y!=NIL and x==y.left
+            x=y
+            y=y.p
+        return y
+    //插入元素
+    biTree_insert(T,k)
+        x=T.root
+        while x!=NIL
+            px=x
+            if k<x.key
+                x=x.left
+            else
+                x=x.right
+        if px=NIL
+            T.root=new Node(k)
+        else 
+            if k<px.key
+                //let new Node(k) be px.left
+            else //let new Node(k) bew px.right
+
+    //移植一颗子树到树中的某个子树的位置u→v
+    transplant(T,u,v)
+        if u==NIL
+            v.p = u
+            return 
+        //cut off u
+        if u.p!=NIL
+            if u.p.left==u
+                u.p.left = NIL
+            else u.p.right==u
+                u.p.right = NIL
+        //cut off v and plant u
+        u.p=v.p
+        if v.p!=NIL
+            if v.p.left==v
+                v.p.left = u
+            else v.p.right==v
+                v.p.right = u
+        
+    //删除子树
+    biTree_delete(T,z)
+        if z.left==NIL
+            transplant(T,z.right,z)
+        elseif z.right==NIL
+            transplant(T,z.left,z)
+        else
+            y=biTree_minmum(x)   //y don't have left child
+            if y.p!=z
+                transplant(T,y.right,y)
+                transplant(T,y,z)
+                y.right=z.right
+                y.right.p=y
+            y.left=z.left
+            y.left.p=y
+    /************************
+        当节点内只含有x.p与x.succ指向其后继时，各操作
+        insert(T,z)
+        search(T,k)
+        delete(T,z)
+    ******************************/
+
+红黑树
+    1.每个节点为红或黑
+    2.根为黑
+    3.叶子(NIL)为黑
+    4.红节点子节点均为黑
+    5.每个节点到其叶节点的，不同路径上的，黑色节点数相同
+    //旋转 根节点的父节点为T.nil
+        left_rote(T,x)  //假设x.right!=T.nil
+            y=x.right
+            x.right=y.left                    
+            if y.left!=T.nil                  
+                y.left.p=x                      
+            if x.p==T.nil
+                y.p=T.nil
+                T.root=y
+            else    
+                if x.p.left==x
+                    x.p.left=y
+                else 
+                    x.p.right=y
+                y.p=x
+            x.p=y
+            y.left=x
+        right_rote(T,x)  //假设x.left!=T.nil
+            y=x.left
+            x.left=y.right
+            if y.right!=T.nil
+                y.right.p=x
+            if x.p == T.nil
+                y.p=T.nil
+                T.root=y
+            else 
+                if x.p.left==x
+                    x.p.left=y
+                else 
+                    x.p.right=y
+                y.p=x.p
+            x.p=y
+            y.right=x
+        /***************************************
+                |                        |
+                x        left_rote       y         
+               / \       ---------→     / \
+              a   y      ←---------    x   c
+                 / \     left_rote    / \
+                b   c                a   b
+        ******************************************/
+
+    //插入
+        rb_insert(T,z)
+            pz=T.nil
+            x=T.root
+            while x!=T.nil
+                pz=x
+                if z.key<x.key
+                    x=x.left
+                else 
+                    x=x.right
+            if pz==T.nil
+                T.root=z
+            elseif pz.key>z.key
+                pz.left=z
+            else
+                pz.right=z
+            z.p=pz
+            z.color=RED
+            z.left=T.nil
+            z.right=T.nil
+            rb_insert_fixup(T,z)
+    //插入的修复
+        rb_insert_fixup(T,z)
+        1    while z.p.color==RED
+        2        if z.p==z.p.p.left          //父亲是祖父的左孩子
+        3            y=z.p.p.right           //右叔叔
+        4            if y.color==RED
+        5                z.p.color=BLACK         //case1.右叔叔为红色，父亲叔叔祖父均反色
+        6                y.color=BLACK           //case1.
+        7                z.p.p.color=RED         //case1.
+        8                z=z.p.p
+        9            else
+        0               if z==z.p.right         //case2.右叔叔为黑色，且自身是右孩子
+        1                    z=z.p               //case2.则左旋一次，z父亲变左孩子，z变父亲
+        2                    left_rote(T,z)      //case2.使得z成为左孩子
+        3                //case2.→case3.
+        4                z.p.color=BLACK         //case3.z为左孩子，
+        5                z.p.p.color=RED         //case3.则z的父亲与祖父反色，右旋一次
+        6                right_rote(T,z.p.p)     //case3.
+        7        else                        //父亲是祖父的右孩子，与前一种左右对称
+        8            y=z.p.p.left
+        9            if y.color==RED
+        0                z.p.color=BLACK         //case1.左叔叔为红色，父亲叔叔祖父均反色
+        1                y.color=BLACK           //case1.
+        2                z.p.p.color=RED         //case1.
+        3                z=z.p.p
+        4            else
+        5                if z==z.p.right         //case2.左叔叔为黑色，且自身是左孩子
+        6                    z=z.p               //case2.则右旋一次，z父亲变右孩子，z变父亲
+        7                    right_rote(T,z)     //case2.使得z成为右孩子
+        8                //case2.→case3.
+        9                z.p.color=BLACK         //case3.z为右孩子，
+        0                z.p.p.color=RED         //case3.则z的父亲与祖父反色，左旋一次
+        1                left_rote(T,z.p.p)      //case3.
+        2    T.root.color=BLACK
+    
+    //删除节点
+        //移植 v→u，将v连接u的父亲，取代u的位置
+        rb_transplant(T,u,v)
+            if u.p=T.nil
+                T.root=v
+            elseif u.p.left==u
+                u.p.left=v
+            else
+                u.p.right=v
+            v.p=u.p
+    //删除的修复
+        rb_delete(T,z)                      
+            y=z
+            y_original_color=y.color        //y原来的颜色
+            if z.left==T.nil
+                x=z.right                   //令x为破坏红黑树性质的子树，即删除z后，子树x需要更改
+                rb_transplant(T,z,z.right)
+            elseif z.right==T.nil
+                x=z.left                    
+                rb_transplant(T,z,z.left)   
+            else
+                y=tree_minmum(z.right)      //当左右都有孩子，令y为z的后继
+                y_original_color=y.color    //记录y原来的颜色
+                x=y.right
+                if y.p==z
+                    x.p=y
+                else 
+                    rb_transplant(T,y,y.right)
+                    y.right=z.right
+                    y.right.p=y
+                rb_transplant(T,z,y)
+                y.left=z.left
+                y.left.p=y
+                y.color=z.color             //令y为z的颜色，以抵消删除z的影响，接下来只需处理x的子树。至此，除去子树x，其他位置均保持着红黑树性质
+            if y_original_color==BLACK      //若y原来是黑色，y被移除后，x处黑高必少了一。
+                rb_delete_fixup(T,x)
+        rb_delete_fixup(T,x)    
+            while x.color!=T.root and x.color==BALCK    //当x为黑时，x就必须有一个额外的黑色，以满足黑高不变的性质，换言之，只要"x有额外的一个黑色，整个树就满足红黑树性质"
+                if x==x.p.left  //x是左子
+                    w=w.p.right     //  e1. 
+                        left_rote(T,x.p)    //case1. 令w为黑，x.p为红，左旋x.p，红黑性质未被破坏
+                        w=x.p.right         //case1. 令w重新为x的右兄，整个case1使得x的右兄为黑色
+                    if w.right.color==BALCK and w.right.color=BLACK
+                        w.color=RED         //case2. 当x的右兄w的左右子为黑时，令w为红，此时w就也得有额外的黑色以满足黑高不变
+                        x=x.p               //case2. 又因为x也有额外的黑色，所以转移x与w的额外黑色给x.p，以保持除"x有额外黑色,其他位置均保持红黑树性质"
+                    else
+                        if w.right.color==BLACK //case3. 此时w为黑，w右子为黑，w左子为红
+                            w.left.color=BLACK  //case3. 
+                            w.color=RED         //case3.
+                            right_rote(T,w)     //case3. 令w的左子为黑，右旋后代替w的黑色，w置为红，右旋后没影响
+                            w=x.p.right         //case3. 再次令w为x的右兄，此时的w为原w的左子，原w成了现在w的右子，且右子为红色，整个case3使得w的右子为红色
+                        w.color=w.p.color   //case4. 此时w为黑色，w右子为红色，
+                        w.right.color=BLACK //case4.
+                        w.p.color=BLACK     //case4.
+                        left_rote(T,w.p)    //case4. 令w置为父亲的颜色，w的右子由红转黑，左旋w接替父亲位置，w右子接替w的位置以保持各处黑高不变，w.p置为黑色，左旋一次后向下成为原位置的左子，此处仍是x的父亲，这里的黑色就取代了x的额外黑色，x就不必带一个额外黑色了
+                        x=T.root            //case4. 令x为T的根以退出循环            
+            x.color=BLACK //当x为红色时，因为x有额外的黑色，所以改成黑色
+
+动态规划
+    最优子结构
+        原问题涉及多个子问题
+        在确定使用哪些子问题时，需要考虑多种选择
+            原问题的代价往往是，子问题代价+由选择直接产生的代价
+        子问题无关性
+            考虑求u到v的最长简单路径，设u可以到w再到v，u→w→v
+            试将其分解为两个子问题u→w，w→v，那么u→v的最长简单路径是u→w与w→v的连接吗，显然不是（u→x→w，w→x→v，显然有了环路x→w→x），
+            故这个问题不能由动态规划方法求解，其子问题相关了
+    重叠子问题
+        问题的递归算法反复求解相同的子问题，相对的，分治法中应用递归算法，不断产生新的子问题
+    动态规划适用的问题，同时具有子问题的无关性与重叠性
+
+        矩阵链乘法
+            由<p_0..p_n>给出矩阵链A[1..n]的尺寸(A[i]为p[i-1]*p[i])，矩阵A[i]*A[i+1]的计算代价为p[i-1]*p[i]*p[i+1]
+            怎样组合A[1..n]的计算次序使计算代价最小
+            解析
+                令m[i,j]表示矩阵A[i..j]的最佳代价
+                    m[i,j]=  |                         0                           i==j
+                             | max_{i<k<j}{ m[i,k]+m[k+1,j]+p[i-1]*p[k]*p[j] }     i<j
+            matrix_chain_order(p)
+                n=p.length-1
+                m[1..n,1..n]=0
+                s[1..n,1..n]=0  //s[i,j]存放A[i..j]最佳计算次序的划分
+                for l=2 to n
+                    for i=1 to n-l+1
+                        j=i+l-1
+                        m[i,j]=Inf
+                        for k=i to j-1
+                            q=m[i,k]+m[k+1,j]+p[i-1]*p[k]*p[j]
+                            if q<m[i,j]
+                                m[i,j]=q
+                                s[i,j]=k
+                return (m,s)
+            matrix_multiply(s,A,i,j)
+                if i==j
+                    return A[i]
+                return matrix_multiply(A,s,i,s[i,j])*
+                        matrix_multiply(A,s,s[i,j]+1,j)
+        最长公共子序列
+            LCS: 不连续但次序不变的公共部分
+            序列Z<x1..xm>与序列Y<y1..yn>有公共的子序列Z<z1..zk>,有性质
+                1. 若xm=yn，则Z_{k-1}是X_{m-1}与Y_{n-1}的LCS
+                2. 若xm≠yn，则Z_k 仍是X_m与Y_{n-1}或X_{m-1}与Y_n的LCS
+            令c[i,j]表示X_i,Y_j的最长子序列长，有
+                          |             0               xi=0或yi=0
+                c[i,j]=   |       c[i-1,j-1]+1          xi,yj>0, xi=yj
+                          | max( c[i-1,j], c[i,j-1] )   xi,yj>0, xi≠yj
+            LCS_length(X,Y)
+                m=X.length
+                n=Y.length
+				c[0,0..n]=0
+				c[0..m,0]=0
+				for i=1 to m
+					for j=1 to n
+						if X[i]==Y[j]
+							c[i,j]=c[i-1,j-1]+1
+							b[i,j]="\"
+						else 
+                            if c[i-1,j]>c[i,j-1]
+                                c[i,j]=c[i-1,j]
+                                b[i,j]="↑"
+                            else
+                                c[i,j]=c[i,j-1]
+                                b[i,j]="←"
+                return (c,b)
+            print_LCS(X,b)
+                i,j = size(b)
+                while i==0 or j==0
+                    if b[i,j]=="\"
+                        print x[i]
+                    elseif b[i,j]=="↑"
+                        --i
+                    else 
+                        --j
+            改进：可以在O(1)的时间内知道c中的方向，大可不必使用b来存放方向
+        最长递增子序列
+            令F[i]为以A[i]为结尾的并包含A[i]的递增子序列最长值，有
+                F[i]= | 1
+                      | max_{j<i and a[j]<a[i]}(F[j]+1) 
+            再令D[k]为长度为k的若干个递增子序列中最小的那个末尾元素
+            LIS_length(A)
+                n=A.length
+                F[1..n]=0
+                D[0..n]=Inf     k]为Inf以便随时更改
+                D[0]=-Inf       //D[0]为-Inf以便随时更改D[1]
+                D[1]=A[1]
+                D.size=1        //D.size为目前LIS的长
+                for i=1 to n
+                    for k= 0 to D.size
+                        if A[i]>D[k] and k+1>=F[i]  //若A[i]大于长度为k的序列的末尾元素，并且k+1大于等于F[i]时
+                            F[i]=k+1                // 若k+1大于原值，则F[i]=k+1
+                            if A[i]<D[k+1]          // 现在A[i]已经是一个长度为k+1的递增序列的末尾值了，若A[i]小于D[k]
+                                D[k+1]=A[i]         //  显然应该让A[i]为这个最小末尾元素
+                                if k+1>D.size       //保持D.size正确性
+                                    ++D.size
+                return F,D.size
+            print_LIS(A,F,D)
+                n=A.length
+                M[1..D.size]=0       //M为最长递增子序列
+                k=D.size
+                i=n
+                while k>1               //从最后一个元素开始找最长递增子序列        
+                    if M[F[i]]<A[i]         //当A[i]是一个较大的第F[i]个元素时
+                        if F[i]>=k               //F[i]是当前要找的第k元素
+                          and A[i]<M[F[i]+1]     // 且A[i]比已经找到的第F[i]+1元素小
+                            M[F[i]]=A[i]        //那么就是一个合理的较大的第F[i]个元素
+                            k=F[i]-1            //也就该重新寻找第F[i]-1个元素
+                    --i
+                print M[1..D.size]
+
+        最优二叉搜索树
+            n个已排序关键字<k_1..k_n>，对应查找概率<p_1..p_n>，n+1个伪关键字，对应不在序列K中的关键字
+            <d_0,..d_n>，对应概率<q_1,..q_n>，有k_i<d_i<k_{i+1}
+            由K与D组成一颗二叉搜索树，搜索一次查找次数为
+                E = sum_{i=1,n}{depth(k_i)*q_i} + sum_{i=0,n}{depth(d_i)*q_i} +1 //由于根深为0，查找次数要+1
+            子问题：
+                求解子序列k_i,..k_j的最优二叉搜索树，
+                当i>=1,i-1<=j<=n，j=i-1，则序列只包含伪关键字d_{i-1}
+                令e[i,j]为此子序列的最优搜索代价，最终求得e[1,n]
+                当j>=i时，可以选出一个k_r作为根节点，i..r-1, r+1..j分别作左右子树，
+                令w[i,j]=sum{l=i,j}{p_l}+sum{l=i-1,j}{q_l}，即所有概率之和
+                    e[i,j]=p_r+( e[i,r-1]+w[i,r-1] ) + (e[r+1,j]+w[r+1,j])
+                又有
+                    w[i,j]=w[i,r-1]+w[r+1,j]+p_r
+                故  e[i,j]=e[i,r-1]+e[r+1,j]+w[i,j]
+            得出递归公式
+                e[i,j] =                q_{i-1}                 j=i-1
+                        min{i<=r<=j}{e[i,r-1]+e[r+1,j]+w[i,j]}  i<=j
+            最后定义一个root[i,j]以保存e[i,j]表示的子树的根节点的位置
+            optimal_BST(p,q,n)
+                e[1..n+1,0..n]=0
+                root[1..n,1..n]=0
+                for i=1 to n+1
+                    e[i,i-1]=q[i-1]
+                    w[i,i-1]=q[i-1]
+                for l=1 to n
+                    for i=1 to n-l+1
+                        j=i+l-1
+                        e[i,j]=Inf
+                        w[i,j]=w[i,j-1]+p[j]+q[j]
+                        for r=i to j
+                            t=e[i,j]=e[i,r-1]+e[r+1,j]+w[i,j]
+                            if t<e[i,j]
+                                e[i,j]=t
+                                root[i,j]=r
+                return e,root
+
+
+贪心算法
+    活动选择问题
+        有一个活动集合S={A[1],..A[n]},每个活动A[i]有开始结束时间[A[i].a,A[i].b),为一个半开区间，事件已按A[i].b递增排序
+        若事件A[i],A[j]有A[i].a>=A[j].b,或A[j].a>=A[i].b，则称事件i,j是兼容的，在此问题中，希望选出一个最大的兼容活动集
+        动态规划的解法
+            令c[i,j]表示S[i,j]的最优解的大小，r[i,j]表示S[i,j]最优解中包含的某一事件的下标，
+            p[i]表示事件i开始前最晚结束的事件下标，q[i]表示事件i结束后最早开始的事件下标
+            则 c[i,j]=                  0                       j<i
+                        max{k=i+1,j-1}{c[i,p[k]]+c[q[k],j]+1}   i<=j
+            solution_DP(A)
+                A[0].b=-Inf
+                A[n+1].a=Inf
+                for i=1 to n
+                    k=i-1
+                    while A[k].b>A[i].a
+                        k--
+                    p[i]=k
+                    k=i+1
+                    while A[k].a<A[i].b
+                        k++
+                    q[i]=k
+                c[1..n,1..n]=0
+                for i=1 to n
+                    c[i,i]=1
+                for l=2 to n
+                    for i=1 to n-l+1
+                        j=i+l-1
+                        t=0
+                        for k=i+1 to j
+                            t=c[i,p[k]]+c[q[k],j]+1
+                            if t>c[i,j]
+                                c[i,j]=t
+                                r[i,j]=k
+                return c,r
+        贪心选择
+            在一串事件中，最早结束的一个事件必然在某个最大兼容活动集中，即最早结束以给后面的事件最多的活动时间
+            activity_selector(A)
+                n=A.length
+                r.append(A[1])
+                for i=2 to n
+                    if A[i].a>=r.lastone.b
+                        r.append(A[i])
+                return r
+        一个变种
+            事件中多了一个价值v，求最大价值的兼容活动集
+            排序结束时间相同时，按开始时间递增排序，这样：
+            activity_selector(A)
+                n=A.length
+                r.append(A[1])
+                for i=2 to n
+                    if A[i].a>=r.lastone.b
+                        r.append(A[i])
+                    else if A[i].v>r.lastone.v
+                        r.lastone=A[i]
+                return r
+    区间图着色问题
+        有一组活动，需要安排活动室，希望用最少的活动室完成所有活动
+        建立一活动室链表，
+        将所有活动的开始和结束时间排序，从头遍历，
+        若为开始时间，则遍历活动室链表找空闲教室，
+        若为结束时间，则释放该事件的教室
+        排序数组结构{ time,beginOrEnd,activityNum }
+        colorize(A)
+            x[1..2*n]
+            room[1..n]=free
+            for i=1 to n
+                x[i].time=A[i].begin
+                x[i].beginOrEnd=true
+                x[i].activityNum=i
+                x[2*i].time=A[i].end
+                x[2*i].beginOrEnd=false
+                x[2*i].activityNum=i
+            compare(x1,x2)
+                return x1.time<x2.time
+            sort(x,compare)
+            for i=1 to 2*n
+                if x.beginOrend
+                    k=1
+                    while room[k]!=free
+                        k++
+                    room[k]=busy
+                    A[x[i].activityNum].roomNum=k
+                else
+                    room[A[x[i].activityNum].roomNum]=free
+            return 
+    0-1背包问题 与 分数背包问题
+        小偷的背包可容纳重W的商品，商品有价值v与重量w，0-1意味着商品不可分割，分数则反之
+        动态规划的选择依赖于子问题的求解，即0-1背包中的问题依赖于子问题：剩下的背包容量的价值最大化
+        贪心算法则不依赖与子问题，只考虑价值重量比最大者优先即可
+
+                
+                
+
+                    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
