@@ -1,0 +1,57 @@
+https://git-scm.com/book/zh/v1/
+
+git config --global user.name "Morris_Ubuntu"
+git config --global user.email xxxxx
+		core.editor vim等  默认编辑器
+		merge.tool vimdiff  合并冲突时的差异分析工具
+git config --list 查看现有配置
+
+####################
+初始化仓库
+git init
+
+git add *.xxx添加文件到缓存
+git commit -m 'commit message'
+
+#######################
+从已有仓库克隆
+git clone git://github.com/xxx/xxx.git [可以添加文件夹作为参数]
+
+#########################
+文件状态
+	untracked--add-->unmodified--(编辑文件后)-->modified--stage-->staged--commit-->unmodified
+	untracked<--remove--unmodified
+git status查看文件状态
+	add后的文件会被暂存，暂存后的修改不会保存在其中
+git commit -a 跳过add步骤自动把所有跟踪过的文件暂存起来一并提交
+
+##########################
+git remote -v
+
+###########################
+git remote add origin git@github.com:MorrisMing7/d.git 在将本地分支关联远程的仓库的origin
+git push origin master 推送
+########################
+暂时保存未提交的代码，（以进行另外的工作，后切换回来
+git stash
+git stash list 查看
+git stash apply 切换回来 
+git stash drop 删除此次的stash记录 可以有参数以删除某一次的记录
+git stash pop  等于apply并drop
+git stash clear  清除所有stash记录
+#############################
+merge rebase的使用
+git checkout master 切换到master分支
+git merge featureA
+或者
+git rebase featureA 
+区别是
+	merge是直接腾出一块地方，把featureA的内容放进来
+	rebase是先进行比较，将二者重新排序并放置
+###########################
+分支
+git branch develop 新建一个名为develop的分支
+git checkout develop 切换到之
+git checkout -b xxx 新建并切换到
+git push origin xxx 推送到远程
+
