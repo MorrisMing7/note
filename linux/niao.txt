@@ -404,9 +404,11 @@ Shell脚本
         read -p "please input xxx: " -t n argName  #等待时间单位秒
     数值计算 var=$((${firstnu}*${secnu}))
             echo "2.20*2.2" |bc #精确度为字符串中的最长小数点后位数
-            echo "scale=80; 4*a(1)" | bc -lq
+            计算圆周率
+            echo "scale=80; 4*a(1)" | bc -lq  # a(1)是bc中的一个函数表示arctan
     执行方式
-        source 在父程序中执行，变量会被保留
+        source 在父程序中执行，变量会被保留        
+		    例如常用的不注销系统而要让某些写入 ~/.bashrc 的设定生效时使用的『 source ~/.bashrc 』
         bash xxx.sh 在子程序中执行，除非export，否则不会被保留
     判断 test
         名字
@@ -431,8 +433,8 @@ Shell脚本
         $0=command $1=aa $2=bb ...
         $#表示参数总数，不算0号
         $@表示【 "$1" "$2" "$3" "$4" 】
-        $*表示【 "$1c$2c$3c$4" 】其中c一般是空格
-        shift命令：变量偏移，可加数字参数，表示从左开始偏移变量
+        $*表示【 "$1c$2c$3c$4" 】其中c默认是空格
+        shift命令：变量偏移，可加数字参数，表示从左开始偏移变量，默认1，表示从左到右移除掉n个参数
     条件
         if [ xxxxx ]; then
             # do something
