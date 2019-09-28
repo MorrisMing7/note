@@ -1,0 +1,50 @@
+解压安装包
+    tar -zxvf elasticsearch-xxx.tar.gz
+添加用户
+    groupadd elasticsearch
+    useradd -g elasticsearch es
+    groups es
+修改解压文件夹所有者
+    chown -R es elasticsearch-6.3.2
+修改配置
+    vim elasticsearch-6.3.2/config/elasticsearch.yml 
+    cluster.name: place_name
+    node.name: node-1
+    path.data: /home/ming/data_elastic_search
+    path.logs: /home/ming/logs_elastic_search
+    network.host: 0.0.0.0
+    http.port:9200
+如果需要安装java；
+    yum install java-1.8.0-openjdk
+java-1.8.0-openjdk-devel
+修改系统配置
+    修改/etc/security/limits.conf文件：线程最大同时打开文件数量，与最大线程个数
+----------------------------------------------
+es              hard    nofile          65536
+es              soft    nofile          65536
+es              hard    nproc           4096
+es              soft    nproc           4096 
+----------------------------------------------
+    修改/etc/sysctl.conf文件，增加配置vm.max_map_count=262144
+        sysctl -p使之生效
+启动
+    su es; nohup ./elasticsearch-6.3.2/bin/elaticsearch &;
+查看是否启动
+    curl 127.0.0.1:9200
+    外部访问需要设置或关闭防火墙
+
+
+spring boot
+yml配置
+        spring:
+          data:
+            elasticsearch:
+              cluster-name: place_name
+              cluster-nodes: 192.168.4.17:9301
+          main:
+            allow-bean-definition-overriding: true
+          elasticsearch:
+            rest:
+              uris: ["192.168.4.17:9201"]
+            jest:
+              uris: ["192.168.4.17:9201"]

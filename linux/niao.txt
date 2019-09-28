@@ -12,6 +12,8 @@
         rm xxx 
         rmdir [-p删除也为空的上层] 删除空文件夹
         mv fromdir todir
+        cp sourcefile targetFileOrDirection
+            [--parent] 连带父目录一同复制 cp --parent a/b/c/x.txt directionX 会在目标文件夹下复制目录a/b/c
         chmod a+x filename
             a为all 还可以是u=user，g=group，o=other
             +为增加权限还可以-
@@ -27,10 +29,12 @@
                 /tmp/test    link到本身
                 /tmp/test/.  link到本身
                 /tmp/tets/.. link到tmp
-        du -sh 目录的占容量
+        du -sh 目录的占容量，文件夹大小
             du -s * | sort -nr | head 
     文件    
-        cat一次显示 more逐行显示 less上下翻页（/搜索nN上下一个，gG头尾），head与tail -n number filename
+        cat一次显示 more逐行显示 less上下翻页（/搜索nN上下一个，gG头尾），
+        head与tail -n number filename
+            tail -fn30 #监视文件最后30行
         touch建立空文件，或修改文件时间
         file filename 文件信息
         find / -name passwd
@@ -286,6 +290,8 @@ vim
 		    a 将binary文件以text方式搜寻
 		    c 计算次数  i 忽略大小写  n 输出行号  v 反向选择
             last | grep 'morris' |cut -d ' ' -f 1 #最近登录的账户
+            -An 即After除本行外后续的n行也显示出来
+            -Bn 即Before除本行外前面的n行也显示
     排序
         sort [-f..] [file or stdin]
         -f :忽略大小写的差异,例如 A 与 a 视为编码相同;
@@ -325,8 +331,7 @@ vim
     LANG=C
         编码顺序会对正则有影响[A-Z]在一些语系中会包含小写字母
     grep
-        -An 即After除本行外后续的n行也显示出来
-        -Bn 即Before除本行外前面的n行也显示
+        见上[grep]
         -v 反选  如 xxx | grep -v '^$' #不要空行
         除使用管线外，还可以直接使用文件
             grep 'pattern' fileA fileB ...
@@ -503,7 +508,7 @@ Shell脚本
             root用户重启进入单人维护模式、或以liveCD开机进入根目录修改/etc/shadow将root的密码字段清空
     账号
         id morris
-        用户添加
+        用户添加 添加用户
             useradd [-u UID] [-g 初始群组] [-G 次要群组] [-mM]
                     [-c 说明栏] [-d 家目录绝对路径] [-s shell] 使用者账号名
                 M表示不要建立家目录，默认为m相反
@@ -894,8 +899,24 @@ Shell脚本
         载入核心文件:直接指向可开机的程序区段来开始操作系统;
         转交其他 loader:将开机管理功能转交给其他 loader 负责。
  
-
-
+################################################################################
+时间同步
+    rm -rf /etc/localtime 
+    ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime  
+    ntpdate ntp.api.bz
+防火墙
+    服务状态
+        systemctl status firewalld
+        firewall-cmd --state
+        service firewalld start/restart/stop
+    查询端口是否开放
+        firewall-cmd --query-port=8080/tcp
+    开放80端口
+        firewall-cmd --permanent --add-port=80/tcp
+    移除端口
+        firewall-cmd --permanent --remove-port=8080/tcp
+    重启防火墙(修改配置后要重启防火墙)
+        firewall-cmd --reload
 
 
 

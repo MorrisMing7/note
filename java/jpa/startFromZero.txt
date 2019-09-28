@@ -1,0 +1,272 @@
+spring Initializer https://start.spring.io/
+
+po vo dao service controller 包建立
+
+pom依赖添加
+    @RestController依赖于
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+    调试工具Swagger
+        <dependency>
+            <groupId>com.spring4all</groupId>
+            <artifactId>swagger-spring-boot-starter</artifactId>
+            <version>1.7.0.RELEASE</version>
+        </dependency>
+    Getter与Setter
+        <dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+		</dependency>
+    jpa依赖
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+    mysql
+        <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>6.0.6</version>
+        </dependency>
+    Swagger
+        <dependency>
+			<groupId>com.spring4all</groupId>
+			<artifactId>swagger-spring-boot-starter</artifactId>
+			<version>1.7.0.RELEASE</version>
+		</dependency>
+    Log4j
+    	<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-log4j</artifactId>
+			<version>1.3.8.RELEASE</version>
+		</dependency>
+
+配置文件yml
+                spring:
+                  application:
+                    name: jpatest
+                  resources:
+                    static-locations: classpath:/resources/
+                  datasource:
+                    driver-class-name: com.mysql.jdbc.Driver
+                    url: jdbc:mysql://192.168.4.98:3306/test?useSSL=false
+                    username: root
+                    password: 123456
+                    druid:
+                      filter:
+                        wall:
+                          enabled: false
+                        slf4j:
+                          enabled: true
+                          result-set-log-enabled: false
+                          connection-log-enabled: false
+                          statement-parameter-clear-log-enable: false
+                          statement-create-after-log-enabled: false
+                          statement-close-after-log-enabled: false
+                  jpa:
+                    hibernate:
+                      ddl-auto: update
+                    properties:
+                      hibernate:
+                        temp:
+                          use_jdbc_metadata_defaults: false
+                        dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect   # 与配置entity中geometry字段相关
+                    show-sql: false
+      jpa: hibernate: ddl-auto: validate
+        auto：自动创建|更新|验证数据库表结构。如果没有此方面的需求建议设为"none"。
+        create：每次加载hibernate时都会删除上一次的生成的表，然后根据你的model类再重新来生成新表，
+                哪怕两次没有任何改变也要这样执行，这就是导致数据库表数据丢失的一个重要原因。
+        create-drop：每次加载hibernate时根据model类生成表，但是sessionFactory一关闭,表就自动删除。
+        update：最常用的属性，第一次加载hibernate时根据model类会自动建立起表的结构（前提是先建立好数据库），
+                以后加载hibernate时根据 model类自动更新表结构，即使表结构改变了但表中的行仍然存在不会删除以前的行。
+                要注意的是当部署到服务器后，表结构是不会被马上建立起来的，是要等 应用第一次运行起来后才会。
+        validate：每次加载hibernate时，验证创建数据库表结构，只会和数据库中的表进行比较，不会创建新表，但是会插入新值。
+
+Dao接口模板
+        public interface MasterDao extends JpaRepository<Master,Long>, JpaSpecificationExecutor<Master> {}
+Entity模板
+            @Entity
+            public class Master {
+                @Id
+                @GeneratedValue(strategy = GenerationType.IDENTITY)
+                @SequenceGenerator(name = "master_id_seq",sequenceName = "master_id_seq")
+                private Long Id;
+                private String name;
+            }
+dao接口经验
+    不要用boolean型接收deleteByXxx()，接不到
+vo.Req类
+    字段使用 @javax.validation.constraints.xxx校验
+    controller中方法参数前使用 @javax.validation.Valid，并用BindingResult类存储校验结果，如：
+        public MasterResp createMasterController(
+            @RequestBody @Valid MasterReq masterReq, 
+            BindingResult bindingResult)
+Swagger的使用
+    Application类上的注解
+        @EnableSwagger2Doc
+        @SpringBootApplication
+        public class Application {...}
+    controller类上的注解
+        @Api(tags = "master的接口")
+        @RestController
+        @RequestMapping(value = "master")
+        public class MasterController {
+            @ApiOperation(value = "新建master",note="xxx")
+            @PostMapping
+参数校验
+            public MasterResp createMasterController(@RequestBody @Valid MasterReq masterReq, BindingResult bindingResult) throws Exception {
+                if(bindingResult.hasErrors())
+                    throw new Exception("参数错误:"+bindingResult.getFieldError().getDefaultMessage());
+                Master master = masterService.createNew(masterReq);
+                return new MasterResp(master);
+            }
+        }
+全局异常处理
+        @ControllerAdvice
+        public class ControllerExceptionHandler {
+            @ResponseBody
+            @ExceptionHandler(value = MyException.class) //可设置接收从controller中抛出的不同的异常，用不同的方法来处理
+            public ResponseEntity<Map<String,String>> errorHandler(MyException ex) {
+                Map map = new HashMap();
+                map.put("code", ex.getErrorcode());
+                map.put("message", ex.getMessage());
+                return new ResponseEntity<>(map,HttpStatus.EXPECTATION_FAILED);
+            }
+        }
+
+多数据库
+    yml配置
+        spring:
+          datasource:
+            first:
+              driver-class-name: com.mysql.jdbc.Driver
+              url: jdbc:mysql://192.168.4.98:3306/test?useSSL=false
+              username: root
+              password: 123456
+            second:
+              url: jdbc:postgresql://192.168.4.95:5432/gv_server
+              driverClassName: org.postgresql.Driver
+              username: postgres
+              password: postgres
+    config类
+            import org.springframework.beans.factory.annotation.Qualifier;
+            import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+            import org.springframework.boot.context.properties.ConfigurationProperties;
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+            import org.springframework.context.annotation.Primary;
+            import javax.sql.DataSource;
+            @Configuration
+            public class DataSourceConfig {
+                @Primary
+                @Bean(name = "firstDataSourceProperties")
+                @Qualifier("firstDataSourceProperties")
+                @ConfigurationProperties(prefix = "spring.datasource.first")
+                public DataSourceProperties masterDataSourceProperties() {
+                    return new DataSourceProperties();
+                }
+                @Primary
+                @Bean(name = "firstDataSource")
+                @Qualifier("firstDataSource")
+                @ConfigurationProperties(prefix = "spring.datasource.first")
+                public DataSource firstDataSource(@Qualifier("firstDataSourceProperties") DataSourceProperties dataSourceProperties) {
+                    return dataSourceProperties.initializeDataSourceBuilder().build();
+                }
+
+                @Bean(name = "secondDataSourceProperties")
+                @Qualifier("secondDataSourceProperties")
+                @ConfigurationProperties(prefix = "spring.datasource.second")
+                public DataSourceProperties secondDataSourceProperties() {
+                    return new DataSourceProperties();
+                }
+
+                @Bean(name = "secondDataSource")
+                @Qualifier("secondDataSource")
+                @ConfigurationProperties(prefix = "spring.datasource.second")
+                public DataSource secondDataSource(@Qualifier("secondDataSourceProperties") DataSourceProperties dataSourceProperties) {
+                    return dataSourceProperties.initializeDataSourceBuilder().build();
+                }
+            }
+        tip： @Primary当某个接口有多个实现类时，直接使用Autowired会报找到多个匹配的bean的错误
+                org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type [main.service.Singer] is defined: expected single matching bean but found 2: metalSinger,operaSinger
+                在某个实现类上使用此注解，意为告诉spring：“用这个” 
+        dao与entity包的配置
+            import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
+            import org.springframework.beans.factory.annotation.Autowired;
+            import org.springframework.beans.factory.annotation.Qualifier;
+            import org.springframework.boot.autoconfigure.orm.jpa.HibernateProperties;
+            import org.springframework.boot.autoconfigure.orm.jpa.HibernateSettings;
+            import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+            import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+            import org.springframework.orm.jpa.JpaTransactionManager;
+            import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+            import org.springframework.transaction.PlatformTransactionManager;
+            import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+            import javax.annotation.Resource;
+            import javax.persistence.EntityManager;
+            import javax.sql.DataSource;
+            import java.util.Map;
+
+            @Configuration
+            @EnableTransactionManagement
+            @EnableJpaRepositories(
+                    entityManagerFactoryRef = "secondEntityManagerFactory",
+                    transactionManagerRef = "secondTransactionManager",
+                    basePackages = {"cn.pers.morris.jpatest.dao.secondary"})//对应数据源的Repository的包目录
+            public class SecondRepositoryConfig {
+                @Autowired
+                private HibernateProperties hibernateProperties;
+                @Resource
+                @Qualifier("secondDataSource")
+                private DataSource secondDataSource;
+
+                @Bean(name = "secondEntityManager")
+                public EntityManager entityManager(EntityManagerFactoryBuilder builder) {
+                    return secondEntityManagerFactory(builder).getObject().createEntityManager();
+                }
+
+                @Resource
+                private JpaProperties jpaProperties;
+                @Bean(name = "secondEntityManagerFactory")
+                public LocalContainerEntityManagerFactoryBean secondEntityManagerFactory(EntityManagerFactoryBuilder builder) {
+
+                    Map<String, Object> properties = hibernateProperties.determineHibernateProperties(
+                            jpaProperties.getProperties(), new HibernateSettings());
+                    return builder.dataSource(secondDataSource)
+                            .packages("cn.pers.morris.jpatest.po.secondary")//对应数据库的实体类Entity包目录
+                            .persistenceUnit("secondPersistenceUnit").properties(properties).build();
+                }
+                @Bean(name = "secondTransactionManager")
+                public PlatformTransactionManager secondTransactionManager(EntityManagerFactoryBuilder builder) {
+                    return new JpaTransactionManager(secondEntityManagerFactory(builder).getObject());
+                }
+            }
+        tip: 一个错误：明明已经配置了firstEntityManagerFactory，但是报错找不到entityManagerFactory，如下
+            Description:
+            Parameter 1 of constructor in springfox.documentation.spring.web.plugins.WebMvcRequestHandlerProvider required a bean named 'entityManagerFactory' that could not be found.
+            Action:
+            Consider defining a bean named 'entityManagerFactory' in your configuration.
+            将Application类上的以下注解去掉
+                @EnableJpaRepositories(basePackages = "cn.pers.morris.jpatest.dao")
+                @EntityScan("cn.pers.morris.jpatest.po")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

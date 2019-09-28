@@ -1,0 +1,45 @@
+redis http://download.redis.io/releases/
+tar xf redis-xxxx.tar.gz
+cd redis-xxxx ; 
+make
+[make test]
+cd [创建集群目录redis-cluster];
+mkdir 7001 7002 7003 
+
+cp [redis-xxx]/src/redis-server [redis-cluster]/7001
+cp [redis-xxx]/src/redis-server [redis-cluster]/7002
+cp [redis-xxx]/src/redis-server [redis-cluster]/7003
+
+cp [redis-xxx]/redis.conf 7001
+vi [redis-xxx]/7001/redis.conf 
+    bind 127.0.0.1 x.x.x.x #添加ip
+    port 7001  #修改端口对应
+    daemonize yes
+    cluster-enabled yes
+    cluster-config-file nodes.conf 
+    cluster-node-timeout 5000
+    appendonly yes
+复制到其他文件夹，并修改对应端口
+cp [redis-xxx]/7001/redis.conf [redis-cluster]/7002
+cp [redis-xxx]/7001/redis.conf [redis-cluster]/7002
+启动各个实例（redis.conf中貌似有再当前目录创建相关文件的配置）
+cd [redis-cluster]//7001 && redis-server redis.conf
+cd [redis-cluster]//7002 && redis-server redis.conf
+cd [redis-cluster]//7003 && redis-server redis.conf
+
+redis-trib.rb redis-cli 复制到集群目录
+安装redis-trib.rb的依赖
+    ruby
+    gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+    curl -sSL https://get.rvm.io | bash -s stable
+    可能需要source一下或重启终端
+    rvm -v 输出版本
+    rvm list known
+    rvm install 2.6
+    ruby -v
+    gem -v
+    gem source -r https://rubygems.org/
+    gem source -a https://gems.ruby-china.com/
+    gem install redis
+redis-trib.rb create --replicas 0 [ip]:7001 [ip]:7002 [ip]:7003 
+
