@@ -63,7 +63,7 @@ Application类注解
             service-url:
               defaultZone: http://localhost:1111/eureka
         server:
-          port: 1112
+          port: 2111
 配置pom
     <dependencies>
         ...
@@ -143,6 +143,26 @@ Application类注解
         }
     访问该端口的/consumer接口，即可调用hello/hello返回值
 
+############################################## 断路器 ############################################## 
+application
+    添加 @EnableCircuitBreaker 或
+        @SpringCloudApplication //三合一注解
+将对hello-service的调用放入一个service
+    -----------------------
+        @Service
+        public class HelloService {
+            @Autowired
+            private RestTemplate restTemplate;
+
+            @HystrixCommand(fallbackMethod = "helloFallback")
+            public String helloService(String tmp){
+                return restTemplate.getForEntity("http://hello-service/hello"+"/"+tmp,String.class).getBody();
+            }
+            public String helloFallback(String tmp){
+                return "fallback: error";
+            }
+        }
+    ------------------------
 
 
 

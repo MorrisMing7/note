@@ -21,10 +21,11 @@ git push origin master
 git clone git@github.com:xxxxx/xxx.git
 
 git branch dev      创建dev分支
-git checkout dev    切换到
+git checkout dev    切换到，参数[-b]创建并切换
+    git checkout -b Lrelease_1.1.2 origin/release_1.1.2  #创建Lrelease_1.1.2分支，关联远程分支origin/release_1.1.2
+
 git merge dev       将dev的内容合并到当前
 git branch -d dev   删除分支
-
 git tag v0.9 f52c633 给f5这条记录打一个标记
 git tag v0.1        给最新的commit打标签
 git tag -d v0.9     删除某个标签

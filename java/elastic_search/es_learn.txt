@@ -1,0 +1,157 @@
+解压安装包
+    tar -zxvf elasticsearch-xxx.tar.gz
+添加用户
+    groupadd elasticsearch
+    useradd -g elasticsearch es
+    groups es
+修改解压文件夹所有者
+    chown -R es elasticsearch-6.3.2
+修改配置
+    vim elasticsearch-6.3.2/config/elasticsearch.yml 
+    cluster.name: place_name
+    node.name: node-1
+    path.data: /home/ming/data_elastic_search
+    path.logs: /home/ming/logs_elastic_search
+    network.host: 0.0.0.0
+    http.port:9200
+    transport.tcp.port: 9301
+如果需要安装java；
+    yum install java-1.8.0-openjdk
+java-1.8.0-openjdk-devel
+修改系统配置
+    修改/etc/security/limits.conf文件：线程最大同时打开文件数量，与最大线程个数
+----------------------------------------------
+es              hard    nofile          65536
+es              soft    nofile          65536
+es              hard    nproc           4096
+es              soft    nproc           4096 
+----------------------------------------------
+    修改/etc/sysctl.conf文件，增加配置vm.max_map_count=262144
+        sysctl -p使之生效
+启动
+    su es; nohup ./elasticsearch-6.3.2/bin/elaticsearch &;
+查看是否启动
+    curl 127.0.0.1:9200
+    外部访问需要设置或关闭防火墙
+---------------------------------------------
+elasticsearch数据备份和恢复
+    https://www.jianshu.com/p/3b4d869f2fd1
+
+    vim  elasticsearch-6.3.2/config/elasticsearch.yml 
+        path.repo: ["/data/backups/es_backup"]  #设置备份目录
+    chown es:elasticsearch /data/backups/es_backup
+    #创建备份仓库
+    curl -H "Content-Type:application/json" -XPUT '127.0.0.1:9200/_snapshot/es_backup' -d '{"type": "fs", "settings": {"location": "/data/backups/es_backup" }}'
+    #备份
+    curl -H "Content-Type:application/json" -XPUT '127.0.0.1:9200/_snapshot/es_backup/snapshot_1'
+    #查看备份
+    curl -H "Content-Type:application/json" -XGET '127.0.0.1:9200/_snapshot/es_backup/snapshot_1?pretty=true'
+    #恢复
+    curl -H "Content-Type:application/json" -XPOST '127.0.0.1:9200/_snapshot/es_backup/snapshot_1/_restore'
+----------------------------------------------
+
+spring boot
+yml配置
+        spring:
+          data:
+            elasticsearch:
+              cluster-name: place_name
+              cluster-nodes: 192.168.4.17:9301
+          main:
+            allow-bean-definition-overriding: true
+          elasticsearch:
+            rest:
+              uris: ["192.168.4.17:9201"]         #配置其他端口会出现health check fail的错误，故配置此项
+            jest:
+              uris: ["192.168.4.17:9201"]
+----------------------------------------------------
+sql查询
+    POST http://192.168.4.17:9200/_xpack/sql?format=txt
+
+    curl -H "Content-Type:application/json" -XPOST '127.0.0.1:9200/_xpack/sql?format=txt' -d '{"query": "select * from toponymid where toponym='佳肴饭店'"} '  #解析错误？
+---------------------------------------------------------
+https://www.elastic.co/guide/cn/elasticsearch/guide/current/getting-started.html
+
+
+
+====================================================================
+面向文档
+    存储整个对象或文档，并索引每个文档的内容
+    不同于关系型数据库对行与列的处理，行与列 <=> 数据扁平化。
+--------------------------------------------------------------------
+术语
+    索引：名词表示传统关系数据库的一个表
+          动词表示存储一个数据到表中，即插入，“索引一个文档” <=> “存储一个文档到一个索引” 
+            <=> “插入一条数据到一个表”
+    倒排索引：即关系数据库中为某个列建立索引
+--------------------------------------------------------------------
+增删改查
+    curl -X<VERB> '<PROTOCOL>://<HOST>:<PORT>/<PATH>?<QUERY_STRING>' -d '<BODY>'
+    VERB
+    PROTOCOL
+    PATH
+    增
+        put /_index/_type/_id 增加数据
+
+        PUT /website/blog/123?op_type=create
+        PUT /website/blog/123/_create
+            确保在id存在时不会更新，若id存在回返回409状态码
+
+        post /_index/_type 自动生成id
+            自动生成的 ID 是 URL-safe、 基于 Base64 编码且长度为20个字符的 GUID 字符串。
+            返回示例
+                {  "_index":    "website",
+                   "_type":     "blog",
+                   "_id":       "AVFgSgVHUP18jI2wRx0w",
+                   "_version":  1,
+                   "created":   true
+                }
+    查
+        get /_index/_type/_id[?_source=colmn1,colmn2]
+            若不存在该文档则返回404
+        get /_index1[,index2..][/_type1[,type2]]/_search
+        GET /_search?size=5&from=5
+            分页查询
+        GET /_all/tweet/_search?q=tweet:elasticsearch
+            轻量搜索
+            在 tweet 类型中 tweet 字段包含 elasticsearch （URL编码）单词的所有文档
+        GET /_search?q=mary
+            返回包含 mary 的所有文档
+    改
+        put /_index/_type/_id
+            返回示例
+            { "_index" :   "website",
+              "_type" :    "blog",
+              "_id" :      "123",
+              "_version" : 2,
+              "created":   false 
+            }
+            可以看到多了一个_version字段
+            Elasticsearch 将旧文档标记为已删除，并增加一个新的文档
+            尽管你不能再对旧版本的文档进行访问，但它并不会立即消失。
+            当继续索引更多的数据，Elasticsearch 会在后台清理这些已删除文档。
+        POST /website/blog/1/_update【?retry_on_conflict=5】
+            部分更新 【失败重试5次】
+    删
+        delete /_index/_type/_id
+            返回示例
+            {
+              "found" :    true,
+              "_index" :   "website",
+              "_type" :    "blog",
+              "_id" :      "123",
+              "_version" : 3
+            }
+            删除文档不会立即将文档从磁盘中删除，只是将文档标记为已删除状态。
+            随着你不断的索引更多的数据，在后台清理标记为已删除的文档。
+乐观并发控制
+    version控制版本
+        PUT /website/blog/1?version=1
+        仅当版本为携带的版本时才成功
+    通过外部系统使用版本控制
+        仅当版本小于携带的版本时才成功
+
+
+--------------------------------------------------------------------
+示例：员工数据
+    一个文档代表一个员工

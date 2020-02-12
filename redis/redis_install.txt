@@ -12,8 +12,9 @@ cp [redis-xxx]/src/redis-server [redis-cluster]/7003
 
 cp [redis-xxx]/redis.conf 7001
 vi [redis-xxx]/7001/redis.conf 
-    bind 127.0.0.1 x.x.x.x #添加ip
+    bind 127.0.0.1 x.x.x.x #添加ip，或者注释掉即谁都能访问
     port 7001  #修改端口对应
+    requirepass redis6380 配置密码
     daemonize yes
     cluster-enabled yes
     cluster-config-file nodes.conf 

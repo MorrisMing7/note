@@ -48,6 +48,10 @@
         blkid 磁盘uuid
         parted /dev/sdb1 print 列出磁盘的分区表类型与分区信息
         gdisk fdisk 分区工具 MBR用fdisk GPT用gdisk
+        fdisk -l 查看磁盘
+        fdisk /dev/sdb 进入分区工具
+            m查看帮助 p打印当前分区表 n新建(首个扇区默认即可，末尾扇区默认为全部分配，若需设置记得前面加上+号如+7.3T)
+            tip: 硬盘大于 2TB不能直接新建分区需要先增加一个GPT标签，输入【g】回车
         mkfs 建立文件系统 即格式化
             mkfs.xfs mkfs.ext4...
         mount [-t 文件系统种类] 装置名 挂载点
@@ -200,14 +204,7 @@ vim
         替换
             ${path//morris/Morris} 可以把Morris去掉用以删除，同样的可以用单个/表示只删除一个
             
-        空判断与赋值
-            var=${str[:][+-=?]expr}
-            str  表示是否str没有定义
-            str: 表示是否str没有定义或定义为空字符串
-            +是则为str，否则为expr
-            -与+相反
-            =是则str赋值为expr，否则str不变，后在var=str
-            ?是则expr输出至stderr，否则var=str
+
     命令历史 history
 	    history 10 最近10条
 	        -c 清楚当前shell中的history
@@ -306,8 +303,8 @@ vim
         wc 字数统计 -l 列出行数 -w 列出单词英数 -m 字符数
     双向重导向                                 stdin -> tee -> stdout
         即将输出导向到两处地方                            |  
-        例                                               V
-            last | tee last.list |cut -d " " -f 1      file
+        例                                                V
+            last | tee last.list |cut -d " " -f 1       file
     字符转换
         tr -d '要删除的串' 
            -s 取代掉重复字符
@@ -401,6 +398,7 @@ vim
             > printf "%10s %10d %10d %10d %10.2f\n", $1, $2, $3, $4, total}'
         
 Shell脚本
+
     第一行
         #!/bin/bash
         宣告本shell脚本使用的bash
@@ -412,10 +410,18 @@ Shell脚本
             计算圆周率
             echo "scale=80; 4*a(1)" | bc -lq  # a(1)是bc中的一个函数表示arctan
     执行方式
-        source 在父程序中执行，变量会被保留        
+        source 在当前shell中执行，变量会被保留        
 		    例如常用的不注销系统而要让某些写入 ~/.bashrc 的设定生效时使用的『 source ~/.bashrc 』
         bash xxx.sh 在子程序中执行，除非export，否则不会被保留
     判断 test
+        空判断与赋值
+            var=${str[:][+-=?]expr}
+            str  表示是否str没有定义
+            str: 表示是否str没有定义或定义为空字符串
+            +是则为str，否则为expr
+            -与+相反
+            =是则str赋值为expr，否则str不变，后在var=str
+            ?是则expr输出至stderr，否则var=str
         名字
             -e exist此名存在    -f file这是个文件    -d dir这是个目录
             -b blockdevice装置  -c character装置    -S Socket文件
@@ -738,8 +744,9 @@ Shell脚本
                     r顶层目录
                     F文件被开启但等待回应中
                     m可能是分享的动态函数库
-            lsof 进程开启的文件档名
+            lsof 进程开启的文件信息
                 -a 并且的意思 -u接username累出使用者进程开启的文件
+
                 -U仅列出UnixLike系统的socket文件 +d接目录找出此目录下被开启的文件
             pidof 某个正在运行程序的pid
                 -s仅列出一个 -x同时列出ppid
@@ -904,6 +911,15 @@ Shell脚本
     rm -rf /etc/localtime 
     ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime  
     ntpdate ntp.api.bz
+时间设置
+    date -s 11/14/2018
+    date -s 10:48:50
+    hwclock --systohc  ##使用系统时间同步硬件时间
+    或者
+    hwclock --set --date="11/14/2018 10:56:35"
+    hwclock --hctosys  ##使用硬件时间同步系统时间
+    date #查看
+
 防火墙
     服务状态
         systemctl status firewalld

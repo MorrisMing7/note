@@ -1,1 +1,37 @@
 docker exec -it a9928871a205 /bin/bash
+docker service ls 
+docker service rm xxxxxxxx
+docker ps [-a]
+docker logs -f e3841e37a188
+docker inspect a9928871a205
+docker kill a9928871a205
+docker stats 
+docker service update --publish-add 6379:6379 xalvvsih21fa
+systemctl restart docker
+
+
+LXC -- Linux Container
+    轻量级的虚拟化
+    与宿主机使用同一内核，性能损失小
+    不需要指令级的模拟
+    不需要即时编译
+    轻量隔离，隔离的同时提供共享机制
+基于Go语言开发
+
+docker本质上是一个宿主机的进程
+    namespace实现资源隔离
+    cgroup实现资源限制
+    copy-on-write实现高效的文件操作
+
+namespace的六项隔离
+    UTS     主机与域名
+    IPC     信号量、消息队列和共享内存
+    PID     进程编号
+    NETWORK 网络设备、网络栈、端口
+    MOUNT   挂载点（文件系统）
+    USER    用户组
+control Group
+    资源限制    对任务的资源总额进行限制
+    优先级分配  通过cpu时间片数量与io带宽，相当于控制了任务优先级
+    资源统计    统计资源使用
+    任务控制    任务挂起恢复

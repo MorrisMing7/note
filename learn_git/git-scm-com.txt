@@ -23,6 +23,7 @@ git clone git://github.com/xxx/xxx.git [可以添加文件夹作为参数]
 	untracked<--remove--unmodified
 git status查看文件状态
 	add后的文件会被暂存，暂存后的修改不会保存在其中
+    add -u 只添加
 git commit -a 跳过add步骤自动把所有跟踪过的文件暂存起来一并提交
 
 ##########################
@@ -33,7 +34,7 @@ git remote add origin git@github.com:MorrisMing7/d.git 在将本地分支关联�
 git push origin master 推送
 ########################
 暂时保存未提交的代码，（以进行另外的工作，后切换回来
-git stash
+git stash 
 git stash list 查看
 git stash apply 切换回来 
 git stash drop 删除此次的stash记录 可以有参数以删除某一次的记录
@@ -54,4 +55,5 @@ git branch develop 新建一个名为develop的分支
 git checkout develop 切换到之
 git checkout -b xxx 新建并切换到
 git push origin xxx 推送到远程
+git checkout -b Lrelease_1.1.2 origin/release_1.1.2  #创建Lrelease_1.1.2分支，关联远程分支origin/release_1.1.2
 

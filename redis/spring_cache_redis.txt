@@ -1,0 +1,102 @@
+pom
+=================================================================================
+        <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-pool2</artifactId>
+			<version>2.0</version>
+		</dependency>
+=================================================================================
+yml
+=================================================================================
+spring:
+  redis:
+    database: 15
+    host: 192.168.4.18
+    password: redis6380
+    port: 6380
+    lettuce:
+      pool:
+        max-active: 100
+        max-wait: 5000ms
+        min-idle: 10
+        max-idle: 10
+    timeout: 5000ms
+cache:
+  default:
+    expire-time: 2000
+  user:
+    expire-time: 1800
+    name: test
+=================================================================================
+配置类
+=================================================================================
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+@Configuration
+@EnableCaching
+public class RedisConfig {
+    @Value("${cache.default.expire-time}")
+    private int defaultExpireTime;
+    @Value("${cache.user.expire-time}")
+    private int userCacheExpireTime;
+    @Value("${cache.user.name}")
+    private String userCacheName;
+    //缓存管理器
+    @Bean
+    @Primary
+    public CacheManager cacheManager(RedisConnectionFactory lettuceConnectionFactory) {
+        RedisCacheConfiguration defaultCacheConfig = RedisCacheConfiguration.defaultCacheConfig();
+        // 设置缓存管理器管理的缓存的默认过期时间
+        defaultCacheConfig = defaultCacheConfig.entryTtl(Duration.ofSeconds(defaultExpireTime))
+                // 设置 key为string序列化
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+                // 设置value为json序列化
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                // 不缓存空值
+                .disableCachingNullValues();
+        Set<String> cacheNames = new HashSet<>();
+        cacheNames.add(userCacheName);
+        // 对每个缓存空间应用不同的配置
+        Map<String, RedisCacheConfiguration> configMap = new HashMap<>();
+        configMap.put(userCacheName, defaultCacheConfig.entryTtl(Duration.ofSeconds(userCacheExpireTime)));
+        RedisCacheManager cacheManager = RedisCacheManager.builder(lettuceConnectionFactory)
+                .cacheDefaults(defaultCacheConfig)
+                .initialCacheNames(cacheNames)
+                .withInitialCacheConfigurations(configMap)
+                .build();
+        return cacheManager;
+    }
+}
+
+=================================================================================
+redis缓存的名字为 value::key
+    如 @Cacheable(value="treeQuery",key="'treeQuery_'") 
+        treeQuery::treeQuery_

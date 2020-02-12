@@ -1,0 +1,129 @@
+安装
+        https://blog.csdn.net/iris_csdn/article/details/80693969
+        yum install -y gcc gdb strace gcc-c++ autoconf libjpeg libjpeg-devel libpng libpng-devel freetype freetype-devel libxml2 libxml2-devel zlib zlib-devel glibc glibc-devel glib2 glib2-devel bzip2 bzip2-devel 
+        yum install ncurses ncurses-devel curl curl-devel e2fsprogs patch e2fsprogs-devel krb5-devel libidn libidn-devel openldap-devel nss_ldap openldap-clients openldap-servers libevent-devel libevent uuid-devel uuid mysql-devel
+        yum install make cmake lrzsz perl perl-ExtUtils-Embed readline readline-devl python-devel proj proj-devel screen gmp gmp-devel mpfr mpfr-devel devtoolset-2-gcc devtoolset-2-binutils devtoolset-2-gcc-c++ boost boost-devel cmake3 cmake3-gui cmake3-data 
+        cd /home/ming
+        # yum install wget
+        wget http://download.osgeo.org/postgis/source/postgis-2.3.6.tar.gz
+    ------------------------
+    这个简单https://www.postgresql.org/download/linux/redhat/
+        groupadd postgres
+        useradd -m -g postgres postgres
+        yum install https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+        yum install postgresql11
+        yum install postgresql11-server
+        /usr/pgsql-11/bin/postgresql-11-setup initdb #这一步会在/var/lib/pgsql/11/data下初始化数据库（默认）
+        systemctl enable postgresql-11
+        systemctl start postgresql-11
+        #这时su postgres; psql就可以进入客户端了
+    #如果/var不够大，常常需要迁移数据https://blog.csdn.net/shanzhizi/article/details/50662286
+        systemctl stop postgresql-11
+        mv /var/lib/pgsql/11/data /home/postgres #postgres有权限
+        vim /usr/lib/systemd/system/postgresql-11.service
+    -----------------------------------------   
+    # Location of database directory
+    Environment=PGDATA=/home/postgres/data/  #改成大的分区路径
+        -----------------
+        #修改服务（数据库数据及其配置保存路径）
+        systemctl edit postgresql-11   
+        #输入：   
+        [Service] 
+        Environment=PGDATA=/var/lib/pgsql-11/data    #数据库保存路径,默认路径为/var/lib/pgsql/11/data  
+        systemctl daemon-reload   #重新加载
+        -----------------
+    --------------------------------------------
+        systemctl start postgresql-11
+        su postgres; psql #进入客户端修改密码
+            alter role postgres with password '123';
+    #安装拓展
+        yum install wget net-tools epel-release –y;
+        yum install openssl –y;
+        systemctl restart postgresql-11
+        yum install postgis25_11 postgis25_11-client -y
+        yum install ogr_fdw11 -y
+        yum install pgrouting_11 -y
+
+
+    #外网访问https://blog.csdn.net/ll136078/article/details/12747403
+        #修改data目录下的pg_hba.conf
+        vim /home/postgres/data/pg_hba.conf
+    ----------------------------------
+    host    all     all     192.168.4.0/16  md5  #添加一行
+    ------------------------------------
+        vim /home/postgres/data/postgres.conf中
+            listen_addresses = '*'  #监听远程消息
+        最后防火墙关闭或开放端口
+==========================================================================
+创建数据库
+CREATE DATABASE test WITH OWNER = postgres ENCODING = 'UTF8';
+CREATE EXTENSION postgis;
+psql -h 0.0.0.0 -p 5432 -U postgres
+
+查看所有数据库：\l
+
+查看所有数据库（包括详细参数）：select * from pg_database;
+
+选择数据库：\c databasename
+
+查看所有表：\dt schema_name.*
+
+查看某个表的结构：\d schema_name.tablename
+
+退出psql控制台：\q
+
+查看表的索引：
+select * from pg_indexes where tablename='log';
+
+导出备份数据库：
+pg_dump -h 192.168.4.97 -p 5432 -U postgres -d gv_place -Ft -f /home/place.tar 
+pg_restore -h 192.168.4.38 -p 5431 -U postgres -d gv_place -v /mnt/mfs/lzz/icenter112/icenterData/manager/lg/data/place.tar
+
+
+
+COPY (select id as COL_ID, name as COL_NAME from my_tab order by id) to 'D:/server_exp_dir/file_name.csv' with csv header;
+
+索引
+    gin索引
+        CREATE EXTENSION pg_trgm;
+        CREATE INDEX "JianPin_diMingJianPin" ON "public"."pg_toponym_data" USING gin 
+            ( "colName" COLLATE "pg_catalog"."default" "public"."gin_trgm_ops" );
+
+
+----------------------------------
+去重
+    Delete from county a Where gid !=(select max(gid) From county b Where a.code = b.code)
+
+    SELECT DISTINCT a.parent as aparent, b.code as bcode FROM pg_province_city_county a LEFT JOIN pg_province_city_county b ON a.parent = b.code WHERE b.code is Null ORDER BY a.parent
+id自增
+        
+    CREATE SEQUENCE pg_province_city_county_id_seq
+    START WITH 20000
+    INCREMENT BY 1;
+
+    ALTER TABLE pg_province_city_county ALTER COLUMN id SET DEFAULT nextval('pg_province_city_county_id_seq')
+----------------------------------------
+解除数据库占用
+    SELECT pg_terminate_backend(pg_stat_activity.pid)
+    FROM pg_stat_activity
+    WHERE datname='gv_geodata_ext' AND pid<>pg_backend_pid();
+-------------------------------------------------
+批量删除表
+    CREATE FUNCTION del_ora_table() RETURNS void AS $$
+    DECLARE
+        tmp VARCHAR(512);
+    DECLARE names CURSOR FOR 
+        select tablename from pg_tables where schemaname='public';
+    BEGIN
+      FOR stmt IN names LOOP
+        tmp := 'DROP TABLE '|| quote_ident(stmt.tablename) || ' CASCADE;';
+        RAISE NOTICE 'notice: %', tmp;
+        EXECUTE 'DROP TABLE '|| quote_ident(stmt.tablename) || ' CASCADE;';
+      END LOOP;
+      RAISE NOTICE 'finished .....';
+    END;
+     
+    $$ LANGUAGE plpgsql;
+
+    --执行函数批量删除表
+    select del_ora_table();
