@@ -127,3 +127,6 @@ id自增
 
     --执行函数批量删除表
     select del_ora_table();
+-------------------
+    
+    truncate table   "analysis_basic_datas";

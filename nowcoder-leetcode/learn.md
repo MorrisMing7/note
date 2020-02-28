@@ -79,7 +79,7 @@ Boyce-Codd范式要求在第一范式基础上对于每一个非平凡的函数�
 
 -   权限
 
-    ![img](权限修饰符.jpg)
+    ![img](./learn.assets/权限修饰符.jpg)
 
 -   继承
 
@@ -96,8 +96,186 @@ Boyce-Codd范式要求在第一范式基础上对于每一个非平凡的函数�
 -   面向字符的输入输出都是Reader和Writer的子类
 
     面向字节的都是InputStream和OutputStream的子类
+    
+-   集合
 
+    -   HashMap
 
+        由链表数组组成，链表长度>8则使用红黑树，元素数量>当前容量*加载系数 时进行扩容，
+
+        扩容时避免rehash的优化
+
+        <img src="./learn.assets/image-20200226165006110.png" alt="image-20200226165006110" style="zoom:50%;" />
+
+        并发的put时会陷入死循环HashMap#resize() Line:715
+
+        jdk1.8后从头插法改为尾插法，消除了死循环的bug
+
+        ```java
+        else { // preserve order
+            Node<K,V> loHead = null, loTail = null;
+            Node<K,V> hiHead = null, hiTail = null;
+            Node<K,V> next;
+            do {
+                next = e.next;
+                if ((e.hash & oldCap) == 0) {
+                    if (loTail == null)
+                        loHead = e;
+                    else
+                        loTail.next = e;
+                    loTail = e;
+                }
+                else {
+                    if (hiTail == null)
+                        hiHead = e;
+                    else
+                        hiTail.next = e;
+                    hiTail = e;
+                }
+            } while ((e = next) != null);
+            if (loTail != null) {
+                loTail.next = null;
+                newTab[j] = loHead;
+            }
+            if (hiTail != null) {
+                hiTail.next = null;
+                newTab[j + oldCap] = hiHead;
+            }
+        }
+        ```
+
+        indexFor(e.hash, newCapacity）//jdk7使用这个重新计算索引的位置
+
+        (e.hash & oldCap) == 0 //jdk8通过判断是否为真，不为真：索引=原索引+oldCap
+
+        
+
+    -   LinkedHashMap
+
+        在HashMap中加入双向链表，记录访问顺序
+
+        ![image-20200226170009043](./learn.assets/image-20200226170009043.png)
+
+        可以通过重载以下方法来实现LRU算法
+
+        ```java
+        protected boolean removeEldestEntry(Map.Entry<Object, Object> eldest) {
+        	return tooBig = size() > 100;
+        }
+        ```
+
+    -   TreeMap
+
+        实现一致性hash算法
+
+        ```java
+        import java.nio.ByteBuffer;
+        import java.nio.ByteOrder;
+        import java.util.List;
+        import java.util.SortedMap;
+        import java.util.TreeMap;
+        
+        public class ConsistentHashing<Host> {
+            private TreeMap<Long, Host> nodes;    //虚拟节点
+            private List<Host> hosts;          //真实节点
+            private int num;        //每个真实节点对应虚拟节点的数量
+        
+            public ConsistentHashing(List<Host> hosts, int num) {
+                this.hosts = hosts;
+                this.num = num;
+                init();
+            }
+        
+            public Host getHostInfo(String key){
+                SortedMap<Long, Host> tail = nodes.tailMap(hash(key,seed)); //顺时针绕一圈找到下一个
+                if(tail.size() == 0)
+                    return nodes.get(nodes.firstKey()); //没找到就返回第一个
+                return tail.get(tail.firstKey());
+            }
+        
+            private void init(){
+                nodes = new TreeMap<>();
+                for(int i = 0; i<hosts.size();i++){
+                    Host tmp = hosts.get(i);
+                    for(int j = 0; j<num; j++){
+                        nodes.put(hash("host_"+i+"node_"+j,seed),tmp);
+                    }
+                }
+            }
+        
+            private Long hash(String key, int seed) {
+            	//实现一个hash算法
+            }
+        
+            public void sout(){
+                for(long i :nodes.keySet()){
+                    long j = i/2;
+                    System.out.println((j+(Long.MAX_VALUE/2))*1.0/(Long.MAX_VALUE)+ " " + nodes.get(i));
+        
+                }
+            }
+        
+        }
+        
+        ```
+
+        Murmur Hash 一种hash算法
+
+        ```java
+        private int seed = 0x1A2B3C4D;
+        
+        private Long hash(String key, int seed) {
+            ByteBuffer keyByte = ByteBuffer.wrap(key.getBytes());
+            ByteOrder byteOrder = keyByte.order();
+        
+            keyByte.order(ByteOrder.LITTLE_ENDIAN);
+        
+            long m = 0xc6a4a7935bd1e995L;
+            int r = 47;
+            long h = seed ^ (keyByte.remaining()*m);
+            long k ;
+            while (keyByte.remaining()>=8){
+                k = keyByte.getLong();
+                k *= m;
+                k ^= k>>>r;
+                k *= m;
+        
+                h ^= k;
+                h *= m;
+            }
+            if (keyByte.remaining() > 0) {
+                ByteBuffer finish = ByteBuffer.allocate(8).order(
+                        ByteOrder.LITTLE_ENDIAN);
+                // for big-endian version, do this first:
+                // finish.position(8-buf.remaining());
+                finish.put(keyByte).rewind();
+        
+                h ^= finish.getLong();
+                h *= m;
+            }
+        
+            h ^= h >>> r;
+            h *= m;
+            h ^= h >>> r;
+        
+            keyByte.order(byteOrder);
+            return h;
+        }
+        ```
+
+    -   一致性哈希
+
+        问题：为处理海量数据分散压力往往需要多台机器A、B、C、D...
+
+        直接方案：当数据简单取余的按序划分时，不便于拓展，例如当前只有4台机器，扩充到10台就需要对所有的数据重新调整。
+
+        <img src="./learn.assets/一致哈希.jpg" alt="嘻嘻嘻" style="zoom: 67%;" />
+
+        一致哈希：将所有的key值形成一个闭环，落在环上的key顺时针寻找节点，如k1储存在B节点，但这样仍有缺陷，当B节点数据激增down掉，所有B的数据涌向C导致C也down掉，最后全部节点就都挂了；故每个实体机器分配多个节点，当作虚拟节点hash到换上，当某个节点挂掉，其中的数据会均匀的分散到各个其他机器上，从而避免了雪崩式的宕机。
+
+        
+
+        
 
 ## 组合数学
 
@@ -117,14 +295,14 @@ Boyce-Codd范式要求在第一范式基础上对于每一个非平凡的函数�
 
 ip报文
 
-![img](IP报文.jpg)
+![img](./learn.assets/IP报文.jpg)
 
     生存时间：由数据报源点设置，每经由一个路由器就减去在路由器消耗的一段时间，
         消耗小于1s就减去1s，TTL=0则丢弃这个数据，防止没有交付的数据无休止的在网络里兜圈子。
 
 tcp报文
 
-![img](tcp头.png)
+![img](./learn.assets/tcp头.png)
 
 #### 端口
 
@@ -168,7 +346,7 @@ TCP **443** 端口： **HTTPS** 加密的超文本传输服务
 
 #### 网络分层
 
-![image](网络分层.png)
+![image](./learn.assets/网络分层.png)
 
 -   协议 
 

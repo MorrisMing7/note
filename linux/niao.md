@@ -98,6 +98,18 @@
 
     ​            mount -a 的配置文件/etc/fstab
 
+#### jobs
+
+命令后面加 ```&``` 放入后台执行
+
+前台的命令执行中 ```ctrl+Z``` 挂起放在后台
+
+```bg [jobs号码]``` 在后台继续执行对应任务
+
+```fg [jobs号码]``` 把后台执行的任务放到前台
+
+```kill %[jobs号码]``` 终止任务
+
 # vim
 
 
@@ -792,13 +804,57 @@ debug
     vi /etc/yum.conf
     	增加 `proxy=http://[外网机ip]:3128`
 
+#### 配置DNS
+
+修改NetworkManager.conf 配置文件
+
+```vim /etc/NetworkManager/NetworkManager.conf```
+在[main]中添加
+
+```dns=no```
+修改resolv.conf配置文件
+
+```vim /etc/resolv.conf```
+添加
+
+```
+#主DNS服务器
+nameserver 218.85.157.99
+
+#备DNS服务器
+nameserver 114.114.114.114
+```
+
+
+重启NetworkManager
+
+```systemctl restart NetworkManager```
 
 
 
+#### Nodejs
 
+https://www.linuxidc.com/Linux/2019-02/157179.htm
 
+```
+ curl -sL https://rpm.nodesource.com/setup_10.x | bash -
+ yum -y install nodejs
+ node -v
+```
 
+#### error
 
+-   npm WARN lifecycle my-network@0.1.6~prepublish : cannot run in wd 
+
+    https://stackoverflow.com/questions/18136746/npm-install-failed-with-cannot-run-in-wd
+
+    ```npm run prepublish```
+
+    ``` npm install -g coffee-script node-gyp```
+
+#### epel_release
+
+ EPEL (Extra Packages for Enterprise Linux) 基于Fedora的一个项目，为“红帽系”的操作系统提供额外的软件包，适用于RHEL、CentOS和Scientific Linux.
 
 
 
