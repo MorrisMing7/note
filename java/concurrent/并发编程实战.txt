@@ -1,37 +1,37 @@
-���
-    ��ȫ��
-        ����Ŀ�Ԥ�ϣ�"��Զ���ᷢ����������". 
-    ��Ծ��
-        ĳ����ȷ���������ջᷢ��, ���̵߳Ļ�Ծ�������ǿ����������������ѭ��, ���߳����Ӧ������, ������.
+简介
+    安全性
+        结果的可预料，"永远不会发生糟糕的事情". 
+    活跃性
+        某件正确的事情最终会发生, 单线程的活跃性问题是可能无意中造成无限循环, 多线程则对应有死锁, 饥饿等.
 
 *************************
-* �̰߳�ȫ�� ����Ĺ��� *
+* 线程安全性 对象的共享 *
 *************************
-    ��״̬�Ķ���һ�����̰߳�ȫ��
+    无状态的对象一定是线程安全的
     
-    ��̬���� Race Condition
-        ��ĳ���������ȷ��ȡ���ڶ���߳̽���ִ�е�ʱ��ʱ, �ͻᷢ����̬����. ���Ƿ���ȷҪȡ��������. 
-        ����ľ�̬���������� "�ȼ���ִ��" ����.
-
+    竞态条件 Race Condition
+        当某个计算的正确性取决于多个线程交替执行的时序时, 就会发生竞态条件. 即是否正确要取决于运气. 
+        最常见的竞态条件类型是 "先检查后执行" 操作.
+    
     volatile
-        ���������Ĺ�������ֹ�˱����ϵĲ����������ڴ�����������򡣲���volatile�������ᱻ���浽�Ĵ������������������ɼ��ĵط���
-        ��ˣ���ȡ��volatile���ͱ�������������д���ֵ��
-    serverģʽ��JVM���clientģʽ����������Ż�
-        volatile boolean asleep��
+        声明变量的共享，阻止此变量上的操作与其他内存操作的重排序。并且volatile变量不会被缓存到寄存器或其他处理器不可见的地方。
+        因此，读取的volatile类型变量总是其最新写入的值。
+    server模式的JVM会比client模式的做更多的优化
+        volatile boolean asleep；
         ...
             while(!asleep)
                 countSomeSheep();
-        ���������У���asleepδ����volatile����serverģʽ�£�JVM�Ὣasleep���ж�������ѭ���⣬����һ������ѭ����
+        上述代码中，若asleep未声明volatile，在server模式下，JVM会将asleep的判断提升到循环外，导致一个无限循环。
         
-    volatile������ĳ����������ɡ��ն˻�״̬��־
-        ���ҽ���������������ʱ����Ӧ��ʹ��volatile
-            �Ա�����д������������ڵ�ǰֵ�����ܱ�ֻ֤�е����߳�д�룻
-            �ñ�������������״̬����һ�����벻���������У�
-            ����ʱ����Ҫ������
-        volatileֻ��֤�ɼ���, ������֤ԭ����
-    �������ݳ�
-        ������ʹ�����ܹ��ڵ�ǰ������֮��Ĵ�����ʹ�á�
-        �ݳ���ĳ�����÷����Ķ��󱻷�����
+    volatile常用作某个操作的完成、终端或状态标志
+        当且仅当满足以下条件时，才应该使用volatile
+            对变量的写入操作不依赖于当前值，或能保证只有单个线程写入；
+            该变量不会与其他状态变量一起纳入不变性条件中；
+            访问时不需要加锁。
+        volatile只保证可见性, 而不保证原子性
+    发布与逸出
+        发布：使对象能够在当前作用域之外的代码中使用。
+        逸出：某个不该发布的对象被发布。
         public class A{
             public A(EventSource es){
                 es.registerListener(new EventListener(){
@@ -39,7 +39,7 @@
                 });
             }
         }
-        ���ڲ���EventListenerʵ������ʱ���ⲿ��Aʵ��Ҳ�ݳ��ˡ�
+        当内部的EventListener实例发布时，外部的A实例也逸出了。
         public class SafeListener{
             private final EventListener listener;
             private SafeListener(){
@@ -53,35 +53,35 @@
                 return sl;
             }
         }
-
-    �̷߳��  
-        ���ڵ��߳��з������ݡ�
-        JDBC�е�Connection����Ҫ�����̰߳�ȫ�ģ��̴߳����ӳ�(���ӳ����̰߳�ȫ��)��ȡ
-            connection�������䴦�����������Ľ�Connection���������߳��С�
-        Ad-hoc���
-            ��ȫ�ɳ���ʵ�����е�
-        ջ���
-            ֻ��ͨ���ֲ��������ܷ��ʶ��󡣾ֲ������Ƿ����ִ���߳��еģ�����Աֻ��ȷ�������ö��󲻻��ݳ���
-            ��Ҫ��ȷ˵�����ɱ��ݳ��������Է�����������Ա����Ľ����ݳ���
-        ThreadLocal��
-            ͨ�����ڷ�ֹ�Կɱ䵥ʵ��������ȫ�ֱ������й�����
-            �����ڵ��߳�Ӧ�ó����п�����Ҫά��һ��ȫ�ֵ����ݿ����ӣ������ڳ�������ʱ��ʼ��֮���Ӷ��������ÿ��������Ҫ����һ��Connection����
+    
+    线程封闭  
+        仅在单线程中访问数据。
+        JDBC中的Connection对象不要求是线程安全的，线程从连接池(连接池是线程安全的)获取
+            connection对象，用其处理请求，隐含的将Connection对象封闭在线程中。
+        Ad-hoc封闭
+            完全由程序实现来承担
+        栈封闭
+            只能通过局部变量才能访问对象。局部变量是封闭在执行线程中的，程序员只需确保被引用对象不会逸出。
+            需要明确说明不可被逸出的需求，以防后续开发人员错误的将其逸出。
+        ThreadLocal类
+            通常用于防止对可变单实例变量或全局变量进行共享。
+            例：在单线程应用程序中可能需要维持一个全局的数据库连接，并且在程序启动时初始化之，从而避免调用每个方法都要传入一个Connection对象。
                 private static ThreadLocal<Connection> connectionHolder = new ThreadLocal<Connection>(){
                         public Connection initialValue(){return DriverManager.getConnection(DB_URL);}
                     };
                 public static Connection getConnnection(){return connectionHolder.get();}
-            ��ĳ��Ƶ��ִ�еĲ�����Ҫһ����ʱ���󣬱��绺����������ϣ������ÿ�ζ����·���ö���ʱ��Ҳ��ʹ�����ּ�����
-            ���ε���get����ʱ���ͻ�initialValue����ȡ���ֵ��ThreadLocal<T>����������Map<Thread,T>������ʵ�ֲ���Map���߳̽�����ֵ�ᱻ���ա�
-    ������ 
-        ���ɱ����һ�����̰߳�ȫ�ġ�
-        ��������������Ϊ���ɱ����
-            ���󴴽��Ժ���״̬�����޸ģ�
-            �������������final�ͣ�
-            ����ʱ��ȷ�����ģ������ڼ�this����û���ݳ���
-        volatile�������ɱ����
-            ������ȡĳ��������ʽ�ֽ⣨�����������ͬһֵ�����Σ�
+            当某个频繁执行的操作需要一个临时对象，比如缓冲区，而又希望避免每次都重新分配该对象时，也可使用这种技术。
+            初次调用get方法时，就会initialValue来获取其初值。ThreadLocal<T>概念类似于Map<Thread,T>，但其实现并非Map，线程结束后，值会被回收。
+    不变性 
+        不可变对象一定是线程安全的。
+        满足以下条件即为不可变对象
+            对象创建以后其状态不能修改；
+            对象的所有域都是final型；
+            对象时正确创建的（创建期间this引用没有逸出）
+        volatile发布不可变对象
+            例：获取某个数的因式分解（常常反复求解同一值的情形）
                 public class VolatileCachedFactorizer implements Servlet{
-                    private volatile OneValueCache cache = new OneValueCache(null,null);//cache ���ڻ����ϴ�����ֵ�������´�ֱ�ӻ�ȡ���
+                    private volatile OneValueCache cache = new OneValueCache(null,null);//cache 用于缓存上次求解的值，用于下次直接获取结果
                     public void service(ServletRequest req, ServletResponse resp){
                         BigInteger i = extractFromRequest(req);
                         BigInteger[] factors = cache.getFactors(i);
@@ -89,58 +89,58 @@
                         encodeInroResponse(resp,factors);
                     }
                 }
-    ��ȫ����    
-        �ɱ�������ͨ����ȫ�ķ�ʽ����������ζ���ڷ�����ʹ�õ��߳��б���ʹ��ͬ����
-        һ����ȷ����Ķ������ͨ�����·�ʽ��ȫ����
-            �ھ�̬��ʼ�������г�ʼ��һ����������ã�
-            ���������ñ��浽volatile�����AtomicReference�����У�
-            ���������ñ��浽ĳ����ȷ����Ķ����final����
-            ���������ñ��浽һ����������������
-          ����ȫ�ķ���
+    安全发布    
+        可变对象必须通过安全的方式发布，即意味着在发布和使用的线程中必须使用同步。
+        一个正确构造的对象可以通过以下方式安全发布
+            在静态初始化函数中初始化一个对象的引用；
+            将对象引用保存到volatile域或者AtomicReference对象中；
+            将对象引用保存到某个正确构造的对象的final域中
+            将对象引用保存到一个由锁保护的域中
+          不安全的发布
             public Holder holder;
             public void initialize(){
                 holder = new Holder(1);
-            }//����һ���߳��п�����holder����ʧЧ�ģ�������һ���̵߳���assertSanity()���׳���
+            }//在另一个线程中看到的holder肯是失效的，导致另一个线程调用assertSanity()会抛出错
             public class Holder{
                 private int n;
                 public Holder(int n){this.n = n;}
                 public void assertSanity(){if(n!=n) throw new AssertionError("This statement is false");}
             }
-        Ҫ����һ����̬�����������밲ȫ�ķ�ʽ��ʹ�þ�̬��ʼ����
-            public static Holder holder = new Holder(xx);//��ĳ�ʼ���׶�ִ��
-        ��ʵ�ϵĲ��ɱ����
-            ����ͨ����ȫ��ʽ������
-        �ɱ����
-            ��������ͨ����ȫ��ʽ�����������ұ������̰߳�ȫ�Ļ�����������
-
-        ��������Ĳ���
-            �̷߳�գ�ֻ��һ���߳�ӵ�У��������̲߳��ɼ�
-            ֻ���������κ��̲߳����޸ģ����������ͬ��
-            �̰߳�ȫ���������ڲ�ʵ��ͬ����ͨ�������нӿڷ��ʶ������һ��ͬ��
-            ��������ֻ��ͨ�������ض��������ʣ�������װ�������̰߳�ȫ�����еĶ����Լ��ѷ��������ض��������Ķ���
+        要发布一个静态构造对象，最简单与安全的方式是使用静态初始化器
+            public static Holder holder = new Holder(xx);//类的初始化阶段执行
+        事实上的不可变对象
+            必须通过安全方式来发布
+        可变对象
+            不仅必须通过安全方式来发布，而且必须是线程安全的或由锁保护。
+    
+        共享对象的策略
+            线程封闭：只由一个线程拥有，对其他线程不可见
+            只读共享：任何线程不可修改，则无需额外同步
+            线程安全共享：在内部实现同步，通过对象公有接口访问而无需进一步同步
+            保护对象：只能通过持有特定锁来访问，包括封装在其他线程安全对象中的对象，以及已发布且由特定锁保护的对象
 ******************
-**    �������
+**    对象组合
 ******************
-    �̰߳�ȫ�������Ҫ��
-        ���ɶ���״̬�����б���
-        Լ��״̬�����Ĳ���������
-        ״̬�����Ĳ������ʲ���
-    ʵ�����
+    线程安全类的三个要素
+        构成对象状态的所有变量
+        约束状态变量的不变性条件
+        状态变量的并发访问策略
+    实例封闭
         public class PersonSet{
             private final Set<Person> mSet = new HashSet<Person>();
             public synchronized void add(Person p){mSet.add(p);}
             public synchronized boolean contains(Person p){return mSet.contains(p);}
         }
-        ���ಢδ��Person�����κΰ�ȫ�Լ��裬��Person�ǿɱ�ģ���ô��PersonSet�л�ȡ��Person������Ҫ�����ͬ����
-    java������ģʽ
+        此类并未对Person类做任何安全性假设，若Person是可变的，那么从PersonSet中获取的Person对象还需要额外的同步。
+    java监视器模式
         public class A{
             private final Object myLock = new Object();
             @GuardedBy("myLock") MyClass mc;
             void doSomething(){
-                synchronized(myLock){/*mc�Ĳ���*/}
+                synchronized(myLock){/*mc的操作*/}
             }
         }
-    ��ϡ�������������һ��ԭ�Ӳ���
+    组合·向现有类添加一个原子操作
         public class ImprovedList<T> implements List<T>{
             private final List<T> list;
             public ImprovedList(List<T> list){this.list = list;}
@@ -150,38 +150,38 @@
                 return !contains;
             }
             public synchronized void clear(){list.clear();}
-            //...�������Ƶķ�ʽί��List����������
+            //...按照类似的方式委托List的其他方法
         }
 ****************
-��������ģ��
+基础构建模块
 ****************
-    ͬ��������
-        ��ÿ�����з�������ͬ����ʹ��ÿ��ֻ��һ���سǿ��Է���������״̬
-        ���������ڽ���һЩ�����ĸ��ϲ�������������ת(��ָ��˳���ҵ��¸�Ԫ��)����������(�磺��û��������) ʱ��
-            ����������̲߳������޸�����ʱ�����ܻ��������֮�����Ϊ
-        ���صĵ�����
-            System.out.println("set:"+xSet);//��ʽ�ĵ�����xSet
-            �����ģ���������Ϊ��һ��������Ԫ�ػ��ֵʱ��������hashcode��equalsҲ���ӵ�ִ�е�������
-                containsAll��removeAll��retainAll���Լ���������Ϊ�����Ĺ��캯���� �������������
-    ��������
-        ConcurrentHashMap ʹ�����ȸ�ϸ�ļ�������߲���(�ֶ���)
-            ConcurrentMap<> �ӿ��а����˳����ĸ��ϲ���
-                V putIfAbsent(K key, V value); //����û��ӳ��ֵʱ����
-                boolean remove(K key, V value); //����ӳ�䵽vʱ�Ƴ�
-                boolean replace(K key, V oldValue, V newValue); //����ӳ�䵽��ֵʱ�滻
-                V replace(K key, V newValue);  //����ӳ�䵽ĳ��ֵʱ�滻
+    同步容器类
+        对每个公有方法进行同步，使得每次只有一个县城可以访问容器的状态
+        此类容器在进行一些常见的复合操作：迭代、跳转(按指定顺序找到下个元素)、条件运算(如：若没有则添加) 时，
+            如果有其他线程并发的修改容器时，可能会出现意料之外的行为
+        隐藏的迭代器
+            System.out.println("set:"+xSet);//隐式的迭代了xSet
+            其他的：当容器作为另一个容器的元素或键值时，容器的hashcode与equals也会间接地执行迭代操作
+                containsAll、removeAll、retainAll、以及把容器作为参数的构造函数， 都会对容器迭代
+    并发容器
+        ConcurrentHashMap 使用粒度更细的加锁来提高并发(分段锁)
+            ConcurrentMap<> 接口中包含了常见的复合操作
+                V putIfAbsent(K key, V value); //仅当没有映射值时插入
+                boolean remove(K key, V value); //仅当映射到v时移除
+                boolean replace(K key, V oldValue, V newValue); //仅当映射到旧值时替换
+                V replace(K key, V newValue);  //仅当映射到某个值时替换
         CopyOnWriteArrayList
-            ��ȷ�ķ���һ����ʵ�ϲ��ɱ�Ķ��󡣹ʷ��ʶ���ʱ�����һ��ͬ����
-            ÿ���޸�ʱ������������һ���µ������ĸ�����
-            ���ڵ���Զ�����޸ĵ����Σ����¼�֪ͨ���ַ�֪ͨʱ��Ҫ������ע��ļ���������������ÿ������������ע�����޸Ĳ���ԶԶ���ڽ����¼�֪ͨ�Ĳ�����
+            正确的发布一个事实上不可变的对象。故访问对象时无需进一步同步；
+            每次修改时，创建并发布一个新的容器的副本；
+            用于迭代远多于修改的情形：如事件通知，分发通知时需要迭代已注册的监听器链表，调用每个监听器；而注册与修改操作远远少于接受事件通知的操作。
         
-    �������С�������-������
-        ******************** ���нӿ�*******************************
-        	    �׳��쳣	false/null  ����	��ʱ
-        ����	add(e)	    offer(e)	put(e)	offer(e, time, unit)
-        �Ƴ�	remove()	poll()	    take()	poll(time, unit)
-        ���	element()	peek()	    ������	������
-        /**�����߽��ļ����ӵ���������*/
+    阻塞队列·生产者-消费者
+        ******************** 队列接口*******************************
+             抛出异常    false/null    阻塞	  超时
+        插入	add(e)	    offer(e)	put(e)	offer(e, time, unit)
+        移除	remove()	poll()	    take()	poll(time, unit)
+        检查	element()	peek()	    不可用   不可用
+        /**生产者将文件添加到阻塞队列*/
         public class Producer implements Runnable{
             private final BlockingQueue<File> fileQueue;
             private final FileFilter fileFilter;
@@ -200,7 +200,7 @@
                 }
             }
         }
-        /**�����ߴӶ�����ȡ���ļ���һ������*/
+        /**消费者从队列中取出文件做一定操作*/
         public class Customer implements Runnable{
             private final BlockingQueue<File> queue;
             public void run(){
@@ -210,7 +210,7 @@
                 }
             }
         } 
-        /**����*/
+        /**启动*/
         public static void startIndexing(File[] roots){
             BlockingQueue<File> queue = new LinkedBlockingQueue<File>(BOUND);
             FileFilter filter = new FileFilter(){
@@ -221,50 +221,50 @@
             for(int i=0;i<N_CONSUMERS;i++)
                 new Thread(new Customer(queue)).start();
         }
-        �����̷߳��
-            ��������Ȩ��������ȫ�ķ���������ת������Ȩ
-        ˫�˶��С�������ȡ
-            ���һ������������Լ����еĹ��������Դ��������еĶ�β��ȡ����
-
-    �����������жϷ���
-        �������е�����һ�����׳�InterruptException�ķ���ʱ�������ͱ��һ���������������ұ���Ҫ�����ж���Ӧ��
-            ����֮��������򲶻����м򵥴������ٴ��׳��������쳣���ݸ������ߣ�
-            �ָ��жϣ����²����׳�InterruptedException���������Runnable��һ���֡�����֮���ָ��ж�״̬��
+        串行线程封闭
+            对象所有权交付，安全的发布对象来转移所有权
+        双端队列·工作密取
+            如果一个消费者完成自己队列的工作，可以从另个队列的队尾获取工作
+    
+    阻塞方法与中断方法
+        当代码中调用了一个将抛出InterruptException的方法时，方法就变成一个阻塞方法，并且必须要处理中断响应：
+            传递之：不捕获或捕获后进行简单处理并再次抛出，将此异常传递给调用者；
+            恢复中断：有事不能抛出InterruptedException，如代码是Runnable的一部分。捕获之，恢复中断状态。
                 public class TaskRunnable implements Runnable{
                     BlockingQueue<Task> queue;
                     public void run(){
                         try{ process(queue.take());}
-                        catch (InterruptedException e){ Thread.currentThread().interrrupt();}//�ָ����жϵ�״̬
+                        catch (InterruptedException e){ Thread.currentThread().interrrupt();}//恢复被中断的状态
                     }
                 }
            
-        �ж��߳�: һ���߳̽����жϿ���һ����ֹ����
-            �����̵߳�run������ѭ������ʽ��
+        中断线程: 一个线程将把中断看作一个终止请求，
+            这种线程的run方法遵循如下形式：
                 public void run() {
                     try {
                         ...
-                        /*����ѭ�����Ƿ���ù��߳������ķ�����sleep��join��wait�����ﻹ����Ҫ����
-                          !Thread.currentThread().isInterrupted()��������Ȼ�׳��쳣���˳���ѭ������
-                          ����������������Ƕ���ģ����������������������û������ʱ�����������ȫ������ʱ��*/
+                        /*不管循环里是否调用过线程阻塞的方法如sleep、join、wait，这里还是需要加上
+                          !Thread.currentThread().isInterrupted()条件，虽然抛出异常后退出了循环，显
+                          得用阻塞的情况下是多余的，但如果调用了阻塞方法但没有阻塞时，这样会更安全、更及时。*/
                         while (!Thread.currentThread().isInterrupted()&& more work to do) { do more work  }
                     } catch (InterruptedException e) {
-                        //�߳���wait��sleep�ڼ䱻�ж���
+                        //线程在wait或sleep期间被中断了
                     } finally {
-                        //�߳̽���ǰ��һЩ��������
+                        //线程结束前做一些清理工作
                     }
                 }                
-            ���try��whileѭ����ʱ�������catch������������һ���жϱ�ʾ����Ϊ�׳�InterruptedException�쳣���жϱ�ʾλ���Զ����
+            如果try在while循环里时，因该在catch块里重新设置一下中断标示，因为抛出InterruptedException异常后，中断标示位会自动清除
                 public void run() {
                     while (!Thread.currentThread().isInterrupted()&& more work to do) {
                         try { ...; sleep(delay); } 
-                        catch (InterruptedException e) {Thread.currentThread().interrupt(); }//���������жϱ�ʾ
+                        catch (InterruptedException e) {Thread.currentThread().interrupt(); }//重新设置中断标示
                     }
                 }
-    ͬ��������        
-        ����
-                ȷ��ĳ��������������Դ������ʼ����ż������С���ĳ�����������в����߶�������ż���ִ�С�
+    同步工具类        
+        闭锁
+                确保某个计算在所有资源都被初始化后才继续进行。或某个操作的所有参与者都就绪后才继续执行。
           CountDownLatch
-            /** ����nThreads���̣߳�����task��ͳ������ʱ��*/
+            /** 创建nThreads个线程，运行task，统计运行时间*/
             public long timeTasks(int nThreads, final Runnable task) throws InterruptedException{
                 final CountDownLatch startGate = new CountDownLatch(1);
                 final CountDownLatch endGate = new CountDownLatch(nThreads);
@@ -283,8 +283,8 @@
                 return end-start;
             }
           FutureTask
-            �����ɽ���ļ��㡣����ͨ��Callableʵ�֣��ɴ���3��״̬���ȴ����У��������У�������ɡ�
-            Future.get()����Ϊ�������ȡ�ؼ�����������������������ɣ�ȡ�ؽ�����׳��쳣��
+            可生成结果的计算。计算通过Callable实现，可处于3种状态：等待运行，正在运行，运行完成。
+            Future.get()的行为：完成则取回计算结果，否则阻塞到任务完成，取回结果或抛出异常。
                 public class Preloader{
                     private final FutureTask<ProductInfo> future = new FutureTask<ProductInfo>(
                         new Callable<ProductInfo>(){ public ProductInfo call() throws DataLoadException {return loadProductInfo();}
@@ -301,11 +301,11 @@
                         }
                     }
                 }
-        �ź���
-            Semaphore�ֹ�����һ���������ɣ���ʼ�����ɹ��캯��ָ����ִ�в������Ȼ�ȡ���ɣ�ʹ���Ժ��ͷ����ɡ�
-                ����ǰû������acquire��������������(���жϡ���ʱ)��
-                ��ʼֵΪ1��Semaphore��������������(mutex)���Ҿ߱���������ļ������塣
-            ���Կ��Ʒ���"ĳ���ض���Դ"��"ִ��ָ������"��������ʵ��ĳ����Դ�أ�������ʩ�ӱ߽�
+        信号量
+            Semaphore种管理者一组虚拟许可，初始数量由构造函数指定。执行操作是先获取许可，使用以后释放许可。
+                若当前没有许可acquire则阻塞至有许可(或被中断、超时)。
+                初始值为1的Semaphore可以用作互斥体(mutex)，且具备不可重入的加锁语义。
+            用以控制访问"某个特定资源"或"执行指定操作"的数量，实现某种资源池，对容器施加边界
                 public class BoundedHashSet<T> {
                     private final Set<T> set;
                     private final Semaphore sem;
@@ -325,14 +325,14 @@
                         return wasRemoved;
                     }
                 }
-        դ��
-            Barrier�����ڱ����������¼�����ͬһλ��ʱ�ż���ִ�У����ȴ������̡߳�����ѭ��ʹ�á�
+        栅栏
+            Barrier类似于闭锁，所有事件到达同一位置时才继续执行，即等待其他线程。可以循环使用。
             CyclicBarrier 
                 CyclicBarrier(int parties) 
                 CyclicBarrier(int parties, Runnable barrierAction) 
-                    partiesΪ�߳�������barrierActionΪ�����̵߳����ִ������
+                    parties为线程数量，barrierAction为所有线程到达后执行内容
                 await()
-    ������Ч�������������
+    构建高效可伸缩结果缓存
         public interface Computable<A,V>{ V compute(A arg) throws InterruptedException; }
         public class SomeFunction implements Computable<String, BigInteger> {
             public BigInteger compute(String s){ ...; return xxx; }
@@ -348,7 +348,7 @@
                         FutureTask<V> ft = new FutureTask<V>(new Callable<V>(){
                             public V call() throws InterruptedException{ return c.compute(arg); }
                         });
-                        f = cache.putIfAbsent(arg,ft);//����argǰһ��ӳ���ֵ�����ֵ
+                        f = cache.putIfAbsent(arg,ft);//返回arg前一个映射的值，或空值
                         if( f==null){ f=ft; ft.run();}
                     }
                     try{ return f.get(); }
@@ -357,27 +357,27 @@
                 }
             }
         }
-    ��������
-        ��������final��������Ҫ�����ǿɱ�ģ�
-        ���ɱ����һ�����̰߳�ȫ�ģ�
-        ��װ�����ڹ��������ԣ�
-        ��������ÿ���ɱ������
-        ����ͬһ����������������ͬһ������
-        ���ϲ���Ҫ��������
-        ���ĵ���ָ�����̰߳�ȫ�������̰߳�ȫ����ƣ�
-        ͬ�������ĵ�����
+    并发技巧
+        尽量声明final，除非需要他们是可变的；
+        不可变对象一定是线程安全的；
+        封装有助于管理复杂性；
+        用锁保护每个可变变量；
+        保护同一个不变性条件，用同一个锁；
+        复合操作要持有锁；
+        在文档中指出非线程安全，或做线程安全的设计；
+        同步策略文档化；
 ****************************************************************
 
 ****************************************************************
-********************    �ṹ������Ӧ�ó���  ******************** 
+********************    结构化并发应用程序  ******************** 
 ****************************************************************
 
-����ִ��
-    Executor���
-        �ӿ�
+任务执行
+    Executor框架
+        接口
             public interface Executor{ void execute(Runnable command); }
-            ʹ��Runnable��Ϊ��������о��ޣ����ܷ���ֵ���׳��ܼ����쳣-->ExecutorServiceʹ��Future���������
-        ����Executor��web������
+            使用Runnable作为任务抽象，有局限：不能返回值或抛出受检查的异常-->ExecutorService使用Future做任务抽象
+        基于Executor的web服务器
             class TaskExecutionWebServer{
                 private static final int NTHREADS = 100;
                 private static final Executor exec = Executors.newFixedThreadPool(NTHREADS);
@@ -390,28 +390,28 @@
                     }
                 }
             }
-        �̳߳�
-            Executors�еľ�̬������������һ���̳߳�
-                newFixedThreadPool �̶����ȵ��̳߳أ��ύһ�����񴴽�һ���̣߳�ֱ�������趨���ֵ��
-                    ��ģ���ٱ仯��ĳ���̷߳���δԤ��Exception����������Ჹ��һ����
-                newCacheThreadPool ��ģ�������ƣ�����ǰ��ģ�����������������տ����̡߳�
-                newSingleThreadPool ���������߳�ִ���������߳��쳣���������򴴽���һ������֮(�ṩ����ͬ�����ƣ�
-                    ��ʹ�̲߳�ʱ����������ǿ���ʹ����ȫ�ķ���ڡ������̡߳���)����ȷ�����������ڶ����е�˳����ִ�С�
-                newScheduledThreadPool ������Timer���̶����ȵ��̳߳أ����ӳٻ�ʱ��ʽִ������
-        Executor��������
-            JVM�������з��ػ��߳̽�������˳������޷���ȷ�ر�Executor����ôJVM���޷�����
+        线程池
+            Executors中的静态工厂方法创建一个线程池
+                newFixedThreadPool 固定长度的线程池，提交一个任务创建一个线程，直到到达设定最大值，
+                    规模不再变化（某个线程发生未预期Exception而结束，则会补充一个）
+                newCacheThreadPool 规模不受限制，当当前规模超过处理需求，则会回收空闲线程。
+                newSingleThreadPool 创建单个线程执行任务，若线程异常而结束，则创建另一个代替之(提供大量同步机制，
+                    即使线程不时被替代，总是可以使对象安全的封闭在“任务线程”中)，能确保依照任务在队列中的顺序串行执行。
+                newScheduledThreadPool 类似于Timer，固定长度的线程池，以延迟或定时方式执行任务。
+        Executor生命周期
+            JVM会在所有非守护线程结束后才退出，若无法正确关闭Executor，那么JVM会无法结束
         public interface ExecutorService extends Executor{
-            void shutdown();  //ƽ���Ĺرգ����ڽ������񣬵ȴ��Ѿ��ύ(������δ��ʼ��)���������.
-            List<Runnable> shutdownNow();  //ȡ������ִ���е����񣬲��������������е�����
+            void shutdown();  //平缓的关闭：不在接受任务，等待已经提交(包括尚未开始的)的任务完成.
+            List<Runnable> shutdownNow();  //取消所有执行中的任务，并不再启动队列中的任务。
             boolean isShutdown();
             boolean isTerminated();
-            boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException; //�ȴ�ExecutorService������ֹ״̬
+            boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException; //等待ExecutorService进入终止状态
             ...
         }
-            �رպ��ύ��������"�ܾ�ִ�д�����"��������execute�����׳�RejectedExecutionException��
-            ����������ɺ�ExecutorService������ֹ״̬��
-            ���Ե���awaitTermination���ȴ��䵽����ֹ��
-        ֧�ֹرյ�Web������
+            关闭后提交的任务由"拒绝执行处理器"处理，是execute方法抛出RejectedExecutionException。
+            所有任务完成后，ExecutorService进入终止状态。
+            可以调用awaitTermination来等待其到达终止。
+        支持关闭的Web服务器
             class LifecycleWebServer{
                 private final ExecutorService exec = ...;
                 public void start() throws IOException {
@@ -432,16 +432,16 @@
                     else dispatchRequest(req);
                 }
             }
-        �ӳ�����������
-            Timer�ࣺ���ھ���ʱ�䣬�������ִ�ж�ϵͳʱ�ӱ仯���У�
-            ScheduledThreadPoolExecutor�����棺�������ʱ����ȡ�
-            Timer��ֻ�ᴴ��һ���߳�ִ�����ж�ʱ�������������ʱ����������Ӱ������TimerTask�Ķ�ʱ׼ȷ�ԡ�
-                ���磻����10ms����������һ������ִ����40ms�����ܴ�����ִ����������������4�λ�ֱ��ʧȥ4�ε��á�
-            ��TimerTask�׳�һ��δ�����쳣��������Timer��ȡ�����Ѿ������ȵ���δִ�е�TimerTask������ִ�У��µ�����Ҳ���ܱ����ȡ�������"�߳�й©"
-                ����Timer
-            DelayQueue��ֻ��ĳ��Ԫ������֮�����ִ��take����DelayQueue�з��صĶ���������ӳ�ʱ������
-    �����õĲ�����
-        �����������Ⱦ����
+        延迟与周期任务
+            Timer类：基于绝对时间，因此任务执行对系统时钟变化敏感；
+            ScheduledThreadPoolExecutor来代替：基于相对时间调度。
+            Timer：只会创建一个线程执行所有定时任务。若任务持续时间过长，则会影响其他TimerTask的定时准确性。
+                例如；周期10ms的任务，若有一个任务执行了40ms，可能此任务执行完后快速连续调用4次或直接失去4次调用。
+            若TimerTask抛出一个未检查的异常，则整个Timer被取消。已经被调度但尚未执行的TimerTask不会再执行，新的任务也不能被调度————"线程泄漏"
+                少用Timer
+            DelayQueue：只有某个元素逾期之后才能执行take，从DelayQueue中返回的对象根据其延迟时间排序
+    可利用的并行性
+        串行浏览器渲染程序
             public class SingleThreadRender{
                 void renderPage(charSequence source){
                     renderText(source);
@@ -452,7 +452,7 @@
                         renderImage(data);
                 }
             }
-        Callable��Future�ӿ�
+        Callable与Future接口
             public interface Callable<V>{ V call() throws Exception; }
             public interface Future<V>{
                 boolean cancel(boolean mayInterruptIfRunning);
@@ -461,9 +461,9 @@
                 V get() throws InterrptedException, ExecutionException, CancellationException;
                 V get(long timeout, TimeUnit unit) throws  InterrptedException, ExecutionException, CancellationException, TimeoutException;
             }
-            ExecutorService�е�����submit����������һ��Future            
-            Executorִ�е�������4���������ڽ׶Σ��������ύ����ʼ����ɡ����ύ��δ��ʼ���������ȡ��������ʼ������ֻ������Ӧ�ж�ʱ����ȡ����
-        ʹ��Future�ȴ�ͼ������
+            ExecutorService中的所有submit方法都返回一个Future            
+            Executor执行的任务由4个生命周期阶段：创建、提交、开始、完成。已提交但未开始的任务可以取消。但开始的任务只有在响应中断时才能取消。
+        使用Future等待图像下载
             public class FutureRender{
                 private final ExecutorService executor = ...;
                 void renderPage(charSequence source){
@@ -482,22 +482,22 @@
                         for(ImageData data:imgData)
                             renderImage(data);
                     }catch (InterruptedException e){
-                        Thread.currentThread().interrupt(); //���������ж�״̬
-                        future.cancel(true);  //������Ҫ�������ȡ��
+                        Thread.currentThread().interrupt(); //重新设置中断状态
+                        future.cancel(true);  //不再需要结果，故取消
                     }catch (ExcutionException e){ throw launderThrowable(e.getCause()); }
                 }
             }
-        �칹�����ڲ��л��д��ڵľ���
-            ���ϸ������У���Ⱦҳ����ͼ��������������ͬ���͵��������������Ͳ�ͬʱ�����ܳ��������С��ͬ��������������������������
-                ������Ⱦҳ���ٶ�ԶС������ͼ��ʱ���������յ������봮��ִ�в�𲢲���
+        异构任务在并行化中存在的局限
+            在上个例子中，渲染页面与图像下载是两个不同类型的任务。在任务类型不同时，可能出现任务大小不同而出现性能提升并不大的情况。
+                即当渲染页面速度远小于下载图像时，程序最终的性能与串行执行差别并不大
         CompletionService: Executor + BlockingQueue
-            ��Executor�ύһ��������񣬲���ϣ�������ȡ�ý�������Ա�����ÿ�������������Future��
-                ����ʹ��get����(��timeoutָ��Ϊ0��ͨ����ѵ���ж������Ƿ����)��
-            CompletionService��Executor��BlockingQueue�ںϣ���Callable�����ύ����ִ�У���ʹ�������ڶ��в�����take��������
-                ��poll����ֵ)����ȡ������ɵĽ������Щ����������ʱ��װΪFuture��
-            ExecutorCompletionService���ڹ��캯���д���һ��BlockingQueue�����������ɽ����
-                �������ʱ����Future-Task�е�done�������������ύʱ�������װΪһ��QueueingFuture��extend FutureTask����
-                ��д����done���������������BlockingQueue
+            向Executor提交一组计算任务，并且希望计算后取得结果；可以保留与每个任务相关联的Future，
+                反复使用get方法(将timeout指定为0，通过轮训来判断任务是否完成)。
+            CompletionService将Executor与BlockingQueue融合：将Callable任务提交给它执行，后使用类似于队列操作的take（阻塞）
+                与poll（空值)方法取得已完成的结果，这些结果会在完成时封装为Future。
+            ExecutorCompletionService：在构造函数中创建一个BlockingQueue来保存计算完成结果；
+                计算完成时调用Future-Task中的done方法；在任务提交时，将其包装为一个QueueingFuture（extend FutureTask），
+                改写了其done方法，将结果放入BlockingQueue
 
             public class Render{
                 private final ExecutorService executor = ...;
@@ -514,32 +514,32 @@
                             ImageData img= imageFuture.get();
                             renderImage(img);
                     }catch (InterruptedException e){
-                        Thread.currentThread().interrupt(); //���������ж�״̬
+                        Thread.currentThread().interrupt(); //重新设置中断状态
                     }catch (ExcutionException e){ throw launderThrowable(e.getCause()); }
                 }
             }
-        �����ʱ��
-            //��永������ʱ����ʾĬ�Ϲ��
+        任务的时限
+            //广告案例：超时则显示默认广告
             try{
                 long timeLeft = endNanos - System.nanoTime();
                 Ad ad = future.get(timeLeft,NANOSECONDS);
             } catch (ExecutionException e){ ad = DEFAULT_AD;}
             catch (TimeoutException e){ad = DEFAULT_AD; f.cancel(true);}
-            ExecutorService��
+            ExecutorService中
             List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)  
-                �������񼯺��У���������˳��Future�ύ�����صļ�����
+                按照任务集合中，迭代器的顺序将Future提交到返回的集合中
 
 **************
-* ȡ����ر� *
+* 取消与关闭 *
 **************
-    ����ȡ��
-            �û�����ȡ�������ͼ�ν����"ȡ��"��ť
-            ʱ�޲�������ʱȡ����������
-            Ӧ�ó����¼�����ĳ������зֽⲢ������������һ�������ҵ������������������Ӧȡ����
-            �������������񲢴��̣���һ������������������������������񶼻�ȡ������������״̬���Ա�����������
-            �رգ�Ӧ�ó�������ر�ʱ����������ڴ����Լ�����������ִ��ĳ�ֲ���
-         javaû��һ�ְ�ȫ����ռʽ����ֹͣ�߳�,ֻ��һЩЭ���Ļ��ơ�
-         ʹ��volatile��������ȡ��״̬
+    任务取消
+            用户请求取消：点击图形界面的"取消"按钮
+            时限操作：超时取消所有任务
+            应用程序事件：对某问题进行分解并搜索，当其中一个任务找到解决放弃，其他任务都应取消。
+            错误：如爬虫任务并存盘，当一个任务发生错误如磁盘满，那所有任务都会取消，保存现有状态，以便重新启动。
+            关闭：应用程序或服务关闭时，必须对正在处理以及待处理任务执行某种操作
+         java没有一种安全的抢占式方法停止线程,只有一些协作的机制。
+         使用volatile域来保存取消状态
              @ThreadSafe
              public class PrimeGenerator implements Runnable{
                 @GuardedBy("this")
@@ -557,20 +557,20 @@
                     return new ArrayList<BigInteger>(primes);
                 }
             }
-
-        �ж�
-            ����interrupt������ζ������ֹͣ�̣߳���ֻ�Ǵ������ж���Ϣ
+    
+        中断
+            调用interrupt并不意味着立即停止线程，而只是传递了中断消息
                 public class Thread{
                     public void interrupt(){...}
                     public boolean isInterrupted(){...}
-                    public static boolean interrupted(){...} //��������ص�ǰ���ж�״̬
+                    public static boolean interrupted(){...} //清除并返回当前的中断状态
                 }
-            ��������ʹ��BlockingQueue����List����������޷����ȡ����־���޷����������������ٶȳ��������ߣ�
-                ���б�������queue.put(xxx)���������������̼߳�ʹ����cancel��ͼȡ������ʱ�����������Ĵ��ڶ�
-                ʹ�߳��޷�����������λ�ã����޷��˳��̡߳�
-            ���߳��ڷ�����״̬���жϣ��ж�״̬�����ã����������InterruptedException����ô�ж�״̬һֱ���֣�
-                ֱ����ȷ�����֮��
-          ʹ���ж�ȡ��
+            若上例中使用BlockingQueue代替List，任务可能无法检查取消标志而无法结束：当生产者速度超过消费者，
+                队列被填满，queue.put(xxx)将会阻塞，其他线程即使调用cancel企图取消任务时，由于阻塞的存在而
+                使线程无法到达检查代码的位置，而无法退出线程。
+            当线程在非阻塞状态下中断，中断状态被设置，如果不触发InterruptedException，那么中断状态一直保持，
+                直到明确地清除之。
+          使用中断取消
              public class PrimeProducer extends Thread{
                 private final BlockingQueue queue ;
                 public PrimeProduce(BlockingQueue q){this.queue = q;}
@@ -580,35 +580,35 @@
                         BigInteger p = BigInteger.ONE;
                         while(!Thread.currentThread().isInterrupted())
                             queue.put(p=p.nextProbablePrime());
-                    }catch(InterruptedExecption e){/*�����߳��˳�*/}
+                    }catch(InterruptedExecption e){/*允许线程退出*/}
                 }
             }
-        �жϲ���
-            �̼߳�����񼶵�ȡ�������������˳����ڱ�Ҫʱ����������֪ͨĳ�������߸��߳����˳���
-            ������˽�InterruptedException���ݸ��������⻹��Ҫִ��������������ôӦ���ڲ���
-                InterruptedException֮��ָ��ж�״̬: Thread.currentThread().interrupt();
-            ����֪���ж϶���һ���̵߳����壬����Ͳ����жϸ��߳�
-        ��Ӧ�ж�
-            �����쳣��(������ִ��ĳ���ض������������֮��) �Ӷ�ʹ��ķ�����Ϊ���жϵ���������
-            �ָ��ж�״̬���Ӷ�ʹ����ջ�е��ϲ�����ܹ�������д���
-            ֻ��ʵ�����жϲ��ԵĴ�����������ж������ڳ��������������ж���Ӧ�����ж�����
-            ���������޷�����InterruptedException��ͨ��Runnable������������ô��ҪѰ����һ�ַ�ʽ�����ж�����
-                һ�ֱ�׼�ķ��������ٴε���interrupt���ָ��ж�״̬��
-            ����ȡ���ķ����е��ÿ��жϵ���������ʱ����ѭ���е��øÿ��ж����������������жϺ󱣴��ж�״̬��
-                �����³��ԣ��ڷ���ǰ�ָ��ж�״̬���Ӷ���֪�����߷������ж�
-                public Task getNextTask(BlockingQueue<Task> queue){//��ν����ȡ��ָ�������������жϽ�����Ӧ
+        中断策略
+            线程级或服务级的取消操作，尽快退出，在必要时进行清理，通知某个所有者该线程已退出。
+            如果出了将InterruptedException传递给调用者外还需要执行其他操作，那么应该在捕获
+                InterruptedException之后恢复中断状态: Thread.currentThread().interrupt();
+            除非知道中断对于一个线程的意义，否则就不该中断该线程
+        响应中断
+            传递异常：(可能在执行某个特定任务清除操作之后) 从而使你的方法成为可中断的阻塞方法
+            恢复中断状态：从而使调用栈中的上层代码能够对其进行处理
+            只有实现了中断策略的代码可以屏蔽中断请求，在常规任务与库代码中都不应屏蔽中断请求。
+            如果不想或无法传递InterruptedException（通过Runnable）定义任务，那么需要寻找另一种方式保存中断请求，
+                一种标准的方法就是再次调用interrupt来恢复中断状态。
+            不可取消的方法中调用可中断的阻塞方法时：在循环中调用该可中断阻塞方法，发现中断后保存中断状态，
+                并重新尝试；在返回前恢复中断状态，从而告知调用者发生了中断
+                public Task getNextTask(BlockingQueue<Task> queue){//所谓不可取消指方法本身不对中断进行响应
                     boolean interrupted = false;
                     try{
                         while(true){
                             try{return queue.take();}
-                            catch (InterruptedException e){ interrupted = true; }//����״̬������
+                            catch (InterruptedException e){ interrupted = true; }//保存状态并重试
                         }
                     }finally{
                         if(interrupted) Thread.currentThread.interrupt(); //
                     }
                 }
-            �����벻����ÿ��жϵ�������������Ȼ����ͨ���������������ѯ��ǰ�̵߳��ж�״̬����Ӧ�ж�
-        ��ʱ����
+            若代码不会调用可中断的阻塞方法，仍然可以通过在任务代码中轮询当前线程的中断状态来响应中断
+        计时运行
             private static final ScheduledExecutorService cancelExec = ...;
             public static void timedRun(final Runnable r, long timeout, TimeUnit unit)throws InterruptedException{
                 class RethrowableTask implements Runnable{
@@ -618,35 +618,35 @@
                 } 
                 RethrowableTask task = new RethrowableTask();
                 final Thread taskThread = new Thread(task);
-                taskThread.start();     //����r����
+                taskThread.start();     //任务r启动
                 cancelExec.schedule(new Runnable(){ public run(){ taskThread.interrupt(); }},
-                    timeout, unit);     //��һ��ר�ŵ��߳����ж�����r
+                    timeout, unit);     //在一个专门的线程中中断任务r
                 taskThread.join(unit.toMillis(timeout));
-                task.rethrow();         //�����׳��쳣
+                task.rethrow();         //重新抛出异常
             }
-            ��������һ���߳���ִ�У��ʵ����׳�һ��δ�����쳣ʱ������쳣���ܱ�����(����ʽ����)��
-                ����Ҫ��������쳣��������ʹ��RethrowbaleTask�е�volatile��
-            ��Ҫ���ⲿ�߳��а����жϣ�������һ���߳̽������߳�.
+            任务将在另一个线程中执行，故当其抛出一个未检查的异常时，这个异常可能被忽略(不显式处理)。
+                故需要保存这个异常，上例中使用RethrowbaleTask中的volatile域。
+            不要在外部线程中安排中断：安排另一个线程结束本线程.
                 final Thread selfThred = Thread.currentThread();
                 public void timedRun(Runnable r, long timeout, TimeUnit unit){
-                    //��Ҫ��ô��������
+                    //不要这么做！！！
                     cancelExec.schedule(new Runnable(){public void run(){selfThread.interrupt(); }}, timeout, unit);
                     r.run();
                 }
-                ���ж��߳�ǰ��Ӧ���˽����жϲ��ԡ�timedRun���ܱ��κ�һ���̵߳��ã���˶���������̵߳��жϲ��ԡ�
-        ʹ��Futureȡ������ 
+                在中断线程前，应该了解其中断策略。timedRun可能被任何一个线程调用，因此而不清楚该线程的中断策略。
+        使用Future取消任务 
             private ExecutorService taskExec = ..;
             public static void timedRun(Runnable r, long timeout, TimeUnit unit) throws InterruptedException{
                 Future<?> task = taskExec.submit(r);
                 try{ task.get(timeout,unit); }
-                catch (TimeOutException e){ /*����ȡ��*/ }
+                catch (TimeOutException e){ /*任务被取消*/ }
                 catch (ExecutionExcepiton e){ throw launderThrowable(e.getCause()); }
-                finally{ task.cancel(true); } //ȡ���������е��������������������Ӱ��
+                finally{ task.cancel(true); } //取消正在运行的任务，若任务已完成则无影响
             }
-        ���������жϵ�����
-            ͬ��Socket I/O��InputStream��OutputStream��read��write����������Ӧ�жϣ�����ͨ���رյײ���׽��֣�
-                ʹ������ִ��read��write�������Ľ����׳�SocketException
-                //���Ǳ�׼��ȡ��������װ��Thread�е�interrupt����
+        处理不可中断的阻塞
+            同步Socket I/O：InputStream与OutputStream的read与write方法不会响应中断，可以通过关闭底层的套接字，
+                使得由于执行read或write而阻塞的进程抛出SocketException
+                //将非标准的取消操作封装在Thread中的interrupt方法
                 public class ReaderThread extends Thread{
                     private final Socket socket;
                     private final InputStream in;
@@ -662,23 +662,23 @@
                                 if(count<0)break;
                                 else if(count>0) processBuffer(buf,count);
                             }
-                        }catch (IOException e){ /*�����߳��˳�*/ }
+                        }catch (IOException e){ /*允许线程退出*/ }
                     }
                 }  
-            ͬ��I/O�����ж�һ����InterruptedChannel�ϵȴ����߳�ʱ�����׳�ClosedByInterruptException���ر���·
-                (ͬʱʹ����������·�������������߳�ͬ���׳�ClosedByInterrupteException)
-            Selector���첽I/O���߳��ڵ���Selector.select����ʱ����������close��wakeup��ʹ�߳��׳�ClosedSelectorException��
-                ����ǰ���ء�
-            ��ȡĳ���������߳����ڵȴ�ĳ�������������������޷���Ӧ�жϡ�
-                Lock�����ṩlockInterruptibly�����������ڵȴ�һ������ͬʱ������Ӧ�ж�
-		newTaskFor��װ�Ǳ�׼������
-			newTaskFor��ThreadPoolExecutor�е�һ������������
+            同步I/O：当中断一个在InterruptedChannel上等待的线程时，将抛出ClosedByInterruptException并关闭链路
+                (同时使得在这条链路上阻塞的其他线程同样抛出ClosedByInterrupteException)
+            Selector的异步I/O：线程在调用Selector.select方法时阻塞，调用close或wakeup会使线程抛出ClosedSelectorException，
+                并提前返回。
+            获取某个锁：若线程由于等待某个内置锁而阻塞，则无法响应中断。
+                Lock类中提供lockInterruptibly方法，允许在等待一个锁的同时仍能响应中断
+    	newTaskFor封装非标准的阻塞
+    		newTaskFor是ThreadPoolExecutor中的一个工厂方法，
                 /*  public abstract class AbstractExecutorService extends Object implements ExecutorService{
                     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable)  }
                 */
-                ����Future����������
-				ͨ�����������Future���Ըı�Future.cancel����Ϊ��
-	        public interface CallableTask<T> extends Callable<T>{
+                创建Future来代表任务
+    			通过定制任务的Future可以改变Future.cancel的行为。
+            public interface CallableTask<T> extends Callable<T>{
                 void cancel();
                 RunnableFuture<T> newTask(); 
             }
@@ -706,11 +706,11 @@
                     };
                 }
             }
-    ֹͣ�����̵߳ķ���
-        ���ڳ����̵߳ķ���ֻҪ������ڵ�ʱ����ڴ����̷߳����Ĵ���ʱ�䣬
-            ��ô��Ӧ���ṩ�������ڷ������ر��Լ��Լ�����ӵ�е��̣߳���
-            ��ExecutorService���ṩ��shutdown��shutdownNow        
-        ��־����ʾ��
+    停止基于线程的服务
+        对于持有线程的服务，只要服务存在的时间大于创建线程方法的存在时间，
+            那么就应该提供生命周期方法（关闭自己以及它所拥有的线程）。
+            如ExecutorService中提供的shutdown与shutdownNow        
+        日志服务示例
             public class LogService{
                 private final BlockingQueue<String> queue;
                 private final LoggerThread loggerThread;
@@ -721,10 +721,10 @@
                 public void stop(){ synchronized(this){ isShutdown = true; } loggerThread.interrupt();} 
                 public void log(String msg) throws InterruptedException{
                     synchronized(this){
-                        if(isShutdown) throw IllegalStateException(...);    //��־���񱻹رգ��ܾ���־��Ϣ
-                        ++reservations;     //��־���������У���������Ϣ+1
+                        if(isShutdown) throw IllegalStateException(...);    //日志服务被关闭，拒绝日志消息
+                        ++reservations;     //日志服务运行中，待处理消息+1
                     }                  
-                    queue.put(msg);         //���ӵ������У�������������
+                    queue.put(msg);         //添加到队列中，或阻塞生产者
                 }
                 private class LoggerThread extends Thread{
                     public void run(){
@@ -740,8 +740,8 @@
                     }
                 }
             }
-            ͨ��ԭ�ӵķ�ʽ����Լ��رշ��񣬲�ͨ������һ���������ķ�ʽ�����رշ�����ѱ��������������ύ��־��Ϣ��Ȩ����
-        ExecutorService��־����
+            通过原子的方式检查以及关闭服务，并通过递增一个计数器的方式保留关闭服务后已被阻塞的生产者提交日志消息的权利。
+        ExecutorService日志服务
             public class LogService{
                 private final ExecutorService exec = newSingleThreadExecutor();
                 public void start(){}
@@ -754,14 +754,14 @@
                     catch (RejectedExcutionException ignored){}
                 }
             }
-        �������
-            ��FIFO�����У���ȡ���˶���ʱ����ֹͣ����ȷ���������ڹرշ���ǰ��ɶ����е����й�����
-            ֻ������������������������֪������£��ſ���ʹ�ö������
-                ��������ߣ�ÿ�������߶�����һ�����裬�����߽��յ�N_producers������ʱֹͣ����
-                ��������ߣ������߷���N_consumers�����裻
-            ֻ�����޽�����У����������ܿɿ��Ĺ�����
-        ִֻ��һ�ε�����
-            //���м���̨�������ʼ�
+        毒丸对象
+            在FIFO队列中，读取到此对象时立即停止，以确保消费者在关闭服务前完成队列中的所有工作。
+            只有在生产者消费者数量都已知的情况下，才可以使用毒丸对象。
+                多个生产者：每个生产者都放入一个毒丸，消费者接收到N_producers个毒丸时停止工作
+                多个消费者：生产者放入N_consumers个毒丸；
+            只有在无界队列中，毒丸对象才能可靠的工作。
+        只执行一次的任务
+            //并行检查多台主机的邮件
             boolean checkMail(Set<String> hosts, long timeout, TimeUnit unit)throws InterruptedException{
                 ExecutorService exec = Executors.newCachedThreadPool();
                 final AtomicBoolean hasNewMail = new AtomicBoolean(false);
@@ -773,10 +773,10 @@
                 }finally{exec.shutdown(); exec.awaitTermination(timeout,unit);}
                 return hasNewMail.get();
             }
-		shutdownNow
-            ǿ�йر�ExecutorService������ȡ������ִ�е����񣬲������������ύ��δ��ʼ������
-            �޷�֪����Щ�����ѿ�ʼ��δ������
-            //ʹexecute(���ƵĻ���submit)��¼�رպ�ȡ��������
+    	shutdownNow
+            强行关闭ExecutorService：尝试取消正在执行的任务，并返回所有已提交但未开始的任务。
+            无法知道哪些任务已开始但未结束。
+            //使execute(类似的还有submit)记录关闭后被取消的任务，
             public class TrackingExecutor extends AbstractExecutorService{
                 private final ExecutorService exec;
                 private final Set<Runnable> taskCancelledAtShutdown = new Collections.synchroziedSet(new HashSet<Runnable>());
@@ -795,92 +795,92 @@
                         }
                     });
                 }
-                //��ExecutorService����������ί�и�exec
+                //将ExecutorService的其他方法委托给exec
             }
-    �����������߳���ֹ
-        ���͵��̳߳ع������߳̽ṹ
+    处理非正常线程终止
+        典型的线程池工作者线程结构
             public void run(){
                 Throwable thrown = null;
                 try{ while(!isInterrupted()) runTask(getTaskFromWorkQueue());}
                 catch (Throwable e){ thrown = e; }
                 finally{ threadExited(this,thrown); }
             }
-        δ������쳣����
+        未捕获的异常处理
             public Interface UncaughtExceptionHandler{ void uncaughtException(Thread t,Throwable e); }
-            JVM�Ὣ����δ�����쳣���˳��̵߳��¼������Ӧ�ó����ṩ��UncaughtExceptionHandler�쳣��������
-                ������δ�ṩ�κ��쳣��������Ĭ����Ϊ�ǽ�ջ׷����Ϣ�����System.err��
+            JVM会将由于未捕获异常而退出线程的事件报告给应用程序提供的UncaughtExceptionHandler异常处理器。
+                若程序未提供任何异常处理器，默认行为是将栈追踪信息输出到System.err。
             public class UEHLogger implements Thread.UncaughtExceptionHandler{ 
                 void uncaughtException(Thread t,Throwable e){
                     Logger logger = Logger.getAnonymousLogger();
                     logger.log(Level.SEVERE, "Thread terminated with exception: " + t.getName(), e);
                 } 
             }
-            ͨ��ΪThreadPoolExecutor�Ĺ��캯���ṩһ��ThreadFactory����Ϊ�̳߳��е������߳������쳣��������
-            ��׼�̳߳���������δ�����쳣ʱ�����̣߳�����ʹ��try-finally������֪ͨ���߳̽����󣬻����µ��γɴ�������
-                ��û���ṩ�쳣����������������֪ͨ���ƣ����������ʧ�ܡ�
-                �������װ���ܲ����쳣��Runnable��Callable�У����дThreadPoolExecutor��afterExectue(Runnable r,Throwable t)������
-            ֻ��execute�ύ��������Խ��쳣�����쳣��������submit��������쳣��Future.get��װ��ExecutionException�У������׳���
-    JVM�ر�
-        �رմ�����
-            ������
-                ���з��ػ��߳̽���
-                ����System.exit
-                ƽ̨����SIGINT�źŻ����Ctrl+C
-            ������
+            通过为ThreadPoolExecutor的构造函数提供一个ThreadFactory，来为线程池中的所有线程设置异常处理器。
+            标准线程池允许发生未捕获异常时结束线程，由于使用try-finally来接收通知，线程结束后，会有新的形成代替它，
+                若没有提供异常处理器或其他故障通知机制，任务会悄悄失败。
+                将任务封装在能捕获异常的Runnable或Callable中，或改写ThreadPoolExecutor的afterExectue(Runnable r,Throwable t)方法。
+            只有execute提交的任务可以将异常交给异常处理器，submit的任务的异常被Future.get封装在ExecutionException中，重新抛出。
+    JVM关闭
+        关闭触发：
+            正常：
+                所有非守护线程结束
+                调用System.exit
+                平台发送SIGINT信号或键入Ctrl+C
+            其他：
                 Runtime.halt
-                ����SIGKILL
-        �رչ���  
-            �����ر��У�JVM���ȵ���������ע���Shutdown Hook��JVM������֤�����˳�򣬲���ִ�У�����ͬ������С���������Ҿ��������˳�
-            Shutdown Hook��ͨ��Runtime.addShutdownHookע�ᵫ��δ��ʼ���߳�
-                ʵ�ַ����Ӧ�ó����������������ɾ����ʱ�ļ�������޷��ɲ���ϵͳ�Զ��������Դ
-            //ע��һ���رչ�����ֹͣ��־����
+                发送SIGKILL
+        关闭钩子  
+            正常关闭中，JVM首先调用所有已注册的Shutdown Hook，JVM并不保证其调用顺序，并发执行，必须同步，并小心死锁，且尽量尽快退出
+            Shutdown Hook：通过Runtime.addShutdownHook注册但尚未开始的线程
+                实现服务或应用程序的清理工作，如删除临时文件，清除无法由操作系统自动清除的资源
+            //注册一个关闭钩子来停止日志服务
             public void run(){
                 Runtime.getRuntime().addShutdownHook(new Thread(){public void run(){
                     try{ LogService.this.stop(); }catch(InterruptedException ignored){}
                 }});
             }
-            �ڹر���־����ʱ�����ܵ���������Ҫ��־����Ĺرչ��Ӳ������⣬�ʹرչ��Ӳ�Ӧ��������Щ���ܱ�Ӧ�ó�����������ӹرյķ���
-                ����ֻʹ�õ������ӹر����з���ȷ�����ᷢ����̬������
-        �ػ��߳�
-            JVMֹͣʱ�������ػ��̶߳������������Ȳ�ִ��finallyҲ��ִ�лؾ�ջ����ֱ���˳���
+            在关闭日志服务时，可能导致其他需要日志服务的关闭钩子产生问题，故关闭钩子不应该依赖那些可能被应用程序或被其他钩子关闭的服务。
+                或者只使用单个钩子关闭所有服务，确保不会发生竞态条件。
+        守护线程
+            JVM停止时，所有守护线程都将被抛弃，既不执行finally也不执行回卷栈，而直接退出。
 ****************
-* �̳߳ص�ʹ�� *
+* 线程池的使用 *
 ****************
-        
-    �̼߳�������
-        ���̳߳ز����󣬻��ǵ��̳߳�ʱ�����е�����A�ȴ�һ����δ��ʼ������B�Ľ����B����Ϊ�ò����߳���Դ�޷���ʼ����ɼ�������
-        ��������������ʮ�����Σ������ݿ�����ֻ��10����������10������ȴ���һ���Ľ��ʱ��
-    ʱ��ϳ�������
-        ��������ʱ������������̳߳���Ӧ�Ա�
-        ��Ҫʹ�������Ƶĵȴ�����ʹ����ʱ������������
-        ���̳߳س��������������񣬿���˵���̳߳ع�ģ��С
-    �̳߳ش�С
-        �����ܼ�������N_cup+1
-        I/O�ܼ������� N_thread=N_cup*(1+T_wait/T_compute)
-    ����ThreadPoolExecutor
+
+    线程饥饿死锁
+        当线程池不够大，或是单线程池时，其中的任务A等待一个尚未开始的任务B的结果，B又因为得不到线程资源无法开始，造成饥饿死锁
+        这样的死锁可能十分隐蔽，如数据库连接只有10个，当超过10个任务等待另一个的结果时。
+    时间较长的任务
+        任务阻塞时间过长，导致线程池响应性变差。
+        不要使用无限制的等待，而使用限时的阻塞方法。
+        若线程池充满被阻塞的任务，可能说明线程池规模过小
+    线程池大小
+        计算密集型任务N_cup+1
+        I/O密集型任务 N_thread=N_cup*(1+T_wait/T_compute)
+    配置ThreadPoolExecutor
         ThreadPoolExecutor(
-            int corePoolSize,       //������С
-            int maximumPoolSize,    //����С    
-            long keepAliveTime,     //������ʱ�䣬���������
+            int corePoolSize,       //基本大小
+            int maximumPoolSize,    //最大大小    
+            long keepAliveTime,     //最大空闲时间，超出则回收
             TimeUnit unit, 
             BlockingQueue<Runnable> workQueue, 
             ThreadFactory threadFactory, 
             RejectedExecutionHandler handler) 
-            û������ִ��ʱ���߳�����Ϊ������С��ֻ�й�����������Ŵ����µ��̡߳�
-            ����ʱ�䳬��keepAliveTimeʱ���̱߳����Ϊ�ɻ��գ���ǰ�߳���������corePoolSizeʱ�����̱߳���ֹ
-        ���Ͳ���
-            ���н���б��������������޷����������Ŷӡ����Ͳ��Կ�ʼ�������ã�
-                AbortPolicy���׳�δ����RejectedExecutionException
-                DiscardPolicy����������������
-                DiscardOldestPolicy���������׵����񣬲�Ӧ�����ȼ�����һ��ʹ�ã��������ȼ���ߵģ�
-                CallerRunsPolicy�����������У��ڵ���execute���߳���ִ�и�����
-                    ����ִ��������Ҫһ��ʱ�䣬�����߳������ڴ��ڼ䲻���ύ�����񣬴Ӷ�ʹ�ù������߳���ʱ�䴦������ִ�е�����
-                    ���ڼ䣬���̲߳������accept����˵���������󱻱�����TCP�����У�����Ӧ�ó�����С����������أ�TCP��������
-                    ͬ����ʼ������������ʵ����һ��ƽ�������ܽ��͡�
+            没有任务执行时，线程数量为基本大小，只有工作队列满后才创建新的线程。
+            空闲时间超过keepAliveTime时，线程被标记为可回收，当前线程数量超过corePoolSize时，此线程被终止
+        饱和策略
+            当有界队列被填满后，新任务无法到队列中排队。饱和策略开始发挥作用：
+                AbortPolicy：抛出未检查额RejectedExecutionException
+                DiscardPolicy：悄悄抛弃该任务
+                DiscardOldestPolicy：抛弃队首的任务，不应与优先级队列一起使用（抛弃优先级最高的）
+                CallerRunsPolicy：调用者运行，在调用execute的线程中执行该任务。
+                    由于执行任务需要一定时间，故主线程至少在此期间不会提交新任务，从而使得工作者线程有时间处理正在执行的任务。
+                    这期间，主线程不会调用accept，因此到达的新请求被保存在TCP队列中，而非应用程序队列。若持续过载，TCP队列满后，
+                    同样开始抛弃请求。这样实现了一种平缓的性能降低。
                     ThreadPoolExecutor exec = new ThreadPoolExecutor(N_threads,N_threads,0L,TimeUnit.MILLISECONDS,
                         new LinkedBlockingQueue<Runnable>(CAPACITY));
                     exec.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-            ʹ���ź��������������ύ�ٶ�
+            使用信号量来控制任务提交速度
                 @ThreadSafe
                 public class BoundedExecutor{
                     private ExecutorService exec;
@@ -892,10 +892,10 @@
                             exec.execute(new Runnable(){public void run(){try{command.run()}finally{semaphore.relase();}}});
                         }catch (RejectedExecutionException e){semaphore.relase();}
                     }
-        �̹߳���
-            �ӿ�
+        线程工厂
+            接口
                 public interface ThreadFactory{ Thread newThread(Runnable r);}
-            ����Thread����
+            定制Thread基类
                 public class MythreadFactory implements ThreadFactory{
                     private fianl String poolName;
                     public MyThreadFactory(String name){ this.poolName = name;}
@@ -922,145 +922,144 @@
                     }
                     public static void setDebug(boolean b){debugLifecycle=b;}
                 }
-        ������ٶ���
-            ʹ��Executors�Ĺ���������newSingleThreadExecutor���⣩������Executor����ת��ΪThreadPoolExecutor�ٽ�������
+        构造后再定制
+            使用Executors的工厂方法（newSingleThreadExecutor除外）创建的Executor可以转换为ThreadPoolExecutor再进行设置
                 ExecutorService exec = Executors.newCacheThreadPool();
                 if( exec instanceof ThreadPoolExecutor) ((ThreadPoolExecutor) exec).setCorePoolSize(10);
                 else throw new AssertionError("Oops, assumption");
-            Executors.unconfigurableExecutorService() newSingleThreadExecutorʹ�����ֹ����������ز������õ�ExecutorService
-                �����ϣ��ִ�в��Ա��޸Ŀ���ʹ�ô˹�������
-    ��չThreadPoolExecutor
-        �ɸ�д������beforeExecute��afterExecute��terminated
-        run�������ػ��쳣��afterExecute����ִ�У���������ɺ����Error�򲻻����afterExecute
-        ��beforeExecute�׳�RuntimeException�������񲻻�ִ��afterExecuteҲ����ִ��
-        �̳߳���ɹرղ��������terminated������������ɲ������й������̹߳رպ������ͷ�Executor�����������ڷ���ĸ�����Դ��
-            ����֪ͨ����¼��־���ֻ�finalizeͳ����Ϣ��
-        
+            Executors.unconfigurableExecutorService() newSingleThreadExecutor使用这种工厂方法返回不能配置的ExecutorService
+                如果不希望执行策略被修改可以使用此工厂方法
+    拓展ThreadPoolExecutor
+        可改写方法：beforeExecute、afterExecute、terminated
+        run正常返回或异常，afterExecute都会执行，若任务完成后带有Error则不会调用afterExecute
+        若beforeExecute抛出RuntimeException，则任务不会执行afterExecute也不会执行
+        线程池完成关闭操作后调用terminated，所有任务完成并且所有工作者线程关闭后，用以释放Executor在生命周期内分配的各种资源，
+            发送通知、记录日志、手机finalize统计信息等
+
 ********************************
 ********************************
-**     ��Ծ�ԡ����������     **
+**     活跃性、性能与测试     **
 ********************************
 ********************************
- 
-****************                        
-*�����Ծ��Σ��*
+
 ****************
-    ����
-        ����˳��
-            �����߳��Թ̶�˳������������Ͳ��������������
-            ��̬����˳��
+*避免活跃性危险*
+****************
+    死锁
+        锁的顺序
+            所有线程以固定顺序获得锁，程序就不会出现死锁问题
+            动态的锁顺序
                 transferMoney(Account from,Account to, Amount amount);
-                ������from ������to��
-                �� transferMoney(A,B,20);�� transferMoney(B,A,20);��������ʱ���ͻᷢ������
-        Э������䷢������
-            ������ʱ����ĳ���ⲿ����
+                先锁定from 后锁定to，
+                当 transferMoney(A,B,20);和 transferMoney(B,A,20);并发出现时，就会发生死锁
+        协作对象间发生死锁
+            持有锁时调用某个外部方法
             class A{ public synchronized void fun(B b){ xxx(); b.fun(); } }
             class B{ public synchronized void fun(A a){ aaa(); a.fun(); } } 
-        ���ŵ���
-            ����ĳ������ʱ����Ҫ������--open call
-            ��һЩ�����xxx��aaa�Ĳ�������Ҫ����ԭ�ӵ�
+        开放调用
+            访问某个方法时不需要持有锁--open call
+            在一些情况下xxx与aaa的操作并不要求是原子的
             class A{ public void funx(B b){ synchronized(this){xxx();} b.fun(); } }
             class B{ public void funa(A a){ synchronized(this){aaa();} a.fun(); } } 
-        ��Դ����
-            �̼߳����������н���Դ��
-    ������������
-        ��ʱ����
-            ��ʽʹ��Lock��Ķ�ʱtryLock���������������ơ�
-        �߳�ת����Ϣ��������
-            unixƽ̨����JVM����SIGQUIT��kill -3����Ctrl+\
-            windows��ctrl+Break
-            java5��֧����ʽLock������ת����Ϣ��java6֧�֣�����ȷ�ȱ��������͡�
-                �������������ڵ��߳�ջ֡����صģ���ʽLockֻ���������߳������
-    ������Ծ������
-        ����
-            �߳����ȼ�ʹ�ò�����������ʱִ������ѭ�������޵ȴ���Դ
-            ThreadAPI�ж�����10�����ȼ�����ƽ̨����û����ô�����������ȼ���������ȼ��������ᵽͬһ��ƽ̨�ϵ����ȼ���
-                ������ĳ���߳����ȼ�ʱ�������𲻵��κ����ã����������ö����������̵߳ļ�����
-                �ı��߳����ȼ�����Ϊ��ƽ̨���--������Ҫ�ı����ȼ�
-        ��Ӧ��
-            cpu�ܼ��͵ĺ�̨���������GUI�߳̾���cpuʱ�����ڣ�ʹǰ̨��Ӧ���������̵߳Ĺ������Ǻ�̨������ôӦ���������ȼ�������߳�����Ӧ��
-        ����
-            ͨ���ڴ���������Ϣ��Ӧ���У�����ĳ����Ϣʧ�ܣ��ع����������������ӵ����п�ͷ���������ã���������ع���
-                ���ȵĴ���ָ����룬
-            �����Э���̶߳��Ա˴˽�����Ӧ���޸�����״̬����ʹ�������޷�������ȥʱ������������
-                ������ò������һ��·�������������˴���·������������һ��·�������������ʹ˫�����޷�����Ŀ�ĵ�
-****************                        
-*�������������*
-****************            
-    ����
-        ʹ�ö��߳�Ŀ���������������ܣ������������Ŀ���
-            �̼߳�Э���������������źš��ڴ�ͬ�����������������л����̴߳��������١��̵߳���
-        ��������
-            ���Ӽ�����Դ��cpu���ڴ桢�洢������I/O������ʱ����������������������Ӧ����
-    Amdahl����
+        资源死锁
+            线程饥饿死锁、有界资源池
+    死锁诊断与避免
+        定时的锁
+            显式使用Lock类的定时tryLock来代替内置锁机制。
+        线程转储信息分析死锁
+            unix平台：向JVM发送SIGQUIT（kill -3）或Ctrl+\
+            windows：ctrl+Break
+            java5不支持显式Lock类的相关转储信息，java6支持，但精确度比内置锁低。
+                内置锁与它所在的线程栈帧是相关的，显式Lock只与获得它的线程相关联
+    其他活跃性问题
+        饥饿
+            线程优先级使用不当、持有锁时执行无限循环或无限等待资源
+            ThreadAPI中定义了10个优先级，但平台可能没有那么多数量的优先级，多个优先级可能衣舍到同一个平台上的优先级，
+                当调高某个线程优先级时，可能起不到任何作用，或者起到作用而导致其他线程的饥饿。
+                改变线程优先级的行为与平台相关--尽量不要改变优先级
+        响应性
+            cpu密集型的后台任务可能与GUI线程竞争cpu时钟周期，使前台响应变差。若其他线程的工作都是后台任务，那么应降低其优先级，以提高程序响应性
+        活锁
+            通常在处理事务消息的应用中，处理某个消息失败，回滚，并将其重新添加到队列开头，反复调用，反复错误回滚。
+                过度的错误恢复代码，
+            当多个协作线程都对彼此进行响应而修改自身状态，并使得自身无法进行下去时，即发生活锁
+                两个礼貌的人在一条路上碰到，都给彼此让路，导致又在另一条路碰到，反复如此使双方都无法到达目的地
+****************
+*性能与可伸缩性*
+****************
+    性能
+        使用多线程目的是提升整体性能，但会引入额外的开销
+            线程间协调（加锁、触发信号、内存同步）、增加上下文切换、线程创建与销毁、线程调度
+        可伸缩性
+            增加计算资源（cpu、内存、存储容量、I/O带宽）时，程序吞吐量或处理能力相应增加
+    Amdahl定律
         Speedup <= 1/(F+(1-F)/N) 
-        N�����������ٱȣ�FΪ����ִ�в���
-    �߳����뿪��
-        �������л�
-            �������߳�����>cpu����ʱ������ϵͳ�Ὣ����ִ�е�ĳ���̵߳��ȳ����Ӷ�ʹ������û��cpu��Դ���߳��ܹ��õ�CPUʹ�á�
-            Խ������Խ���������л�
-            ���ں�ռ���ʽϸߣ�����10%����ͨ����ʾ���Ȼ������Ƶ��
-        �ڴ�ͬ��
-            volatile�ڴ�դ��
-            �޾���ͬ��������Ϊ0�����Գ�������Ӱ��΢����΢��
-        ����
-            JVMʵ�������ķ�ʽ�������ȴ����������ϳ��Ի�ȡ��ֱ���ɹ�����ͨ������ϵͳ�����������̡�
-    ����������
-            ����������ʱ��
-            ����������Ƶ��
-            ʹ�ô����������߲����Ե�Э�����ƵĶ�ռ��
-        ��С���ķ�Χ �Լ��ٳ���ʱ��
-            ��һ��ͬ�������ֽ�Ϊ���ͬ���飺�������Խ����������㡱�����������Ƴ�ͬ����ʱ����Ӧ�ÿ��ǡ�
-            public class A{public synchronized void fun(){ xxx(); yyy(); zzz();} }  //xxx,yyy,zzz�Ƿ��д��������I/O����
+        N个处理器加速比，F为串行执行部分
+    线程引入开销
+        上下文切换
+            可运行线程数量>cpu数量时，操作系统会将正在执行的某个线程调度出，从而使得其他没有cpu资源的线程能够得到CPU使用。
+            越多阻塞越多上下文切换
+            若内核占有率较高（多于10%），通常表示调度活动发生的频繁
+        内存同步
+            volatile内存栅栏
+            无竞争同步开销不为0，但对程序整体影响微乎其微，
+        阻塞
+            JVM实现阻塞的方式：自旋等待（持续不断尝试获取，直到成功）、通过操作系统挂起被阻塞进程。
+    减少锁竞争
+            减少锁持有时间
+            降低锁请求频率
+            使用带有允许更高并发性的协调机制的独占锁
+        缩小锁的范围 以减少持有时间
+            将一个同步代码块分解为多个同步块：仅当可以将“大量计算”或阻塞操作移出同步块时，才应该考虑。
+            public class A{public synchronized void fun(){ xxx(); yyy(); zzz();} }  //xxx,yyy,zzz是否有大量计算或I/O阻塞
             public class A{public void fun(){ xxx(); synchronized(this){yyy();} zzz();} }
-        ��С������ �Լ���������Ƶ��
-            ʹ�ò�ͬ�����������໥������״̬����
+        减小锁粒度 以减少锁请求频率
+            使用不同的锁来保护相互独立的状态变量
             public class A{ 
                 private final B b; 
                 private final C c; 
                 public synchronized void addB(String x){b.add(x);}
                 public synchronized void addC(String x){c.add(x);}
-            } //״̬b��c�໥����
-            ��Ϊ
+            } //状态b与c相互独立
+            改为
             public class A{ 
                 private final B b; 
                 private final C c; 
                 public void addB(String x){ synchronized(b){b.add(x);} }
                 public void addC(String x){ synchronized(c){c.add(x);} }
             } 
-        ���ֶ� ��߲���
-            ������������飬ÿ��ʹ��һ��������
-            ConcurrentHashMap��ʵ�֣�ʹ��16���������飬ÿ������������ɢ��Ͱ��1/16����N��Ͱ�ɵ�mod(N,16)����������
-        �����ȵ��� Hot Field
-            ����������Ľ�����棬���������ȵ��򣬶����ƿ�������
-            HashMap��size������ʵ�ַ�ʽ��
-                ÿ�ε�����ס��������ͳ��Ԫ����
-                ά��һ����������put��removeʱ����֮��Ϊ�˱���ö��ÿ��Ԫ�أ�ConcurrentHashMapΪÿ����ά��һ����������
-        �����ռ���ķ���
-            �������������ɱ����
-            ��-д������������д��ռ
-            ԭ�ӱ������ṩ��һ�ֽ��͸����ȵ������ķ�ʽ����̬�����������з�����
-        ���CPU
-            unixϵͳ��vmstat��mpstat����
-            windows��perfmon
-            cpu���ò���ֵ�ԭ��
-                ���ز����㣺���Գ����ز����࣬���Ӹ��أ���������ʡ���Ӧʱ�䡢����ʱ���ָ��ı仯
-                I/O�ܼ���iostat ��perfmon
-                �ⲿ���ƣ�������ĳ���ⲿ���������ݿ��Web��������ƿ�����ܲ��ڴ�����
-                ���������߳�ת����Ϣ�С�waiting to lock monitor��
-            ��ʹ�ö����
-                ����ķ������������ͬ������
-
+        锁分段 提高并发
+            将独立对象分组，每组使用一个锁对象。
+            ConcurrentHashMap的实现：使用16个锁的数组，每个锁保护所有散列桶的1/16，第N个桶由第mod(N,16)个锁保护。
+        避免热点域 Hot Field
+            将反复计算的结果缓存，往往引入热点域，而限制可伸缩性
+            HashMap的size方法的实现方式：
+                每次调用锁住整个对象，统计元素数
+                维护一个计数器，put与remove时更新之（为了避免枚举每个元素，ConcurrentHashMap为每个段维护一个独立计数
+        替代独占锁的方法
+            并发容器、不可变对象、
+            读-写锁：读共享，写独占
+            原子变量：提供了一种降低更新热点域开销的方式、静态计数器、序列发生器
+        监测CPU
+            unix系统的vmstat与mpstat命令
+            windows的perfmon
+            cpu利用不充分的原因
+                负载不充足：测试程序负载不够多，增加负载，检查利用率、响应时间、服务时间等指标的变化
+                I/O密集：iostat 或perfmon
+                外部限制：依赖于某个外部服务，如数据库或Web服务，性能瓶颈可能不在代码中
+                锁竞争：线程转储信息中“waiting to lock monitor”
+            不使用对象池
+                对象的分配操作开销比同步更低
 
 ************
-* ����������� *
+* 并发程序测试 *
 ****************
-    ��ȷ�Բ���
-        �����Ĳ���
-            void test(){//����һ����Ȼ�����ķ������Լ�����жϵ���Ӧ
-                final Xxx obj=...; //�������
+    正确性测试
+        阻塞的测试
+            void test(){//测试一个必然阻塞的方法，以及其对中断的响应
+                final Xxx obj=...; //被测对象
                 Thread testThread = new Thread(){public void run(){
-                    try{obj.xxx();fail();/*û��������ִ�е�����˵�������˴���*/}
+                    try{obj.xxx();fail();/*没有阻塞，执行到此则说明出现了错误*/}
                     catch(InterruptedException success){}
                 }};
                 try{
@@ -1071,65 +1070,66 @@
                     assertFalse(testThread.isAlive());
                 }catch(Exception unexpected){fail();}
             }
-        ��ȫ����
-            �����߳���Ҫ����cpu��
-            �̴߳�����������Ҫ�ϴ�Ŀ���������߳�ִ��ʱ��϶̣�����ѭ�����������������̣߳���������
-                ��Щ�߳̽�����ִ�С���ִ�е��߳̽���ǰ��ɣ����ص����ֺ���
+        安全测试
+            测试线程数要多于cpu数
+            线程创建与启动需要较大的开销，如果线程执行时间较短，并在循环中启动大量这种线程，最坏的情况是
+                这些线程将串行执行。先执行的线程将提前完成，即重叠部分很少
                     t1: ccaxxxx
                     t2: --ccaxxxx
                     t3: ----ccaxxxx
                     t4: ------ccaxxxx
-                ʹ������CountDownLatch��Ϊ��ʼS�ͽ�������E��ʹ��CyclicBarrierҲ��
+                使用两个CountDownLatch作为开始S和结束阀门E或使用CyclicBarrier也可
                     t1: ccaS-------xxxxE
                     t2: --ccaS-----xxxxE
                     t3: ----ccaS---xxxxE
                     t4: ------ccaS-xxxxE
-                    t0:-----------SE----(���̼߳�����
-        α�����������
+                    t0:-----------SE----(主线程继续）
+        伪随机数生成器
             public static int xorShift(int y){
                 y^=(y<<6);
                 y^=(y>>>21);
                 y^=(y<<7);
                 return y;
             }
-        ��Դй¶
+        资源泄露
             class Big{double[] data = new double[10000];}
             void testLeak()throws InterruptedException{
                 BoundedBuffer<Big> bb = new BoundedBuffer<Big>(CAPACITY);
-                int heapSize1 = /*�ѿ�������*/;
+                int heapSize1 = /*堆快照生成*/;
                 for(...)bb.put(new Big);
                 for(...)bb.take();
-                int heapSize2 = /*�ѿ�������*/;
+                int heapSize2 = /*堆快照生成*/;
                 assertTrue(Math.abs(heapSize1-heapSize2)<THRESHOLD);
             }
-        ��������Ľ������
-            �ڴ�����ʹ��Thread.yield()������������������л���ȡ����ƽ̨��JVM���ܽ���ʵ��Ϊ�ղ�����
+        产生更多的交替操作
+            在代码中使用Thread.yield()来产生更多的上下文切换（取决于平台，JVM可能将其实现为空操作）
             public synchronized void transferCredits(Account from,Account to, int amount){
                 from.setBalance(from.getBalance()-amount);
                 if(xxxx) Thread.yield();        
                 to.setBalance(to.getBalance()+amount);
             }
-    ���ܲ���
-
-    ���Ե�����
-        �������ջ���ɶԲ��Խ������ƫ������
-            > ȷ�������ڼ��������ղ���ִ��
+    性能测试
+    
+    测试的陷阱
+        垃圾回收会造成对测试结果产生偏差，解决：
+            > 确保测试期间垃圾回收不会执行
                 java -verbose:gc xxClass
-                ������������ʱ������豸��ʾ��Ϣ
-            > ȷ���������ղ����ڲ����ڼ�ִ�ж��
-        ����ִ��
-            �ִ�JVM���ǽ���ִ�������ִ��ͬʱ���ڵ�
-            -xx: +PrintCompilation���������Ϣ��ȷ�������ڼ�û�б����Ӱ��
-        �Դ���·������ʵ�Ĳ���
-            JVM������ִ�й����ض�����Ϣ�����ɸ��ŵĴ��룬����ζ��ĳ���������ɵ�M�Ĵ����������һ������M�Ĵ��벻ͬ��������ʱ��Ч�ļ�������Ż���
-            ������е��̵߳Ĳ��ԣ�Ҳ����̲߳��Խ����һ��
-            
-        
+                发生垃圾回收时在输出设备显示信息
+            > 确保垃圾回收操作在测试期间执行多次
+        编译执行
+            现代JVM都是解释执行与编译执行同时存在的
+            -xx: +PrintCompilation输出编译信息，确保测试期间没有编译的影响
+        对代码路径不真实的采样
+            JVM可以与执行过程特定的信息来生成更优的代码，这意味着某个程序生成的M的代码可能与另一个程序M的代码不同，即对临时有效的假设进行优化。
+            即便进行单线程的测试，也与多线程测试结合在一起
+
+
+​        
 
 
 
 
 
-                
+​                
 
 
